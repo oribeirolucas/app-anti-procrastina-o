@@ -1,0 +1,687 @@
+{
+  "id": "0b491a9f-5a0f-45a4-9718-eb5b7987eeed",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.diagnostico": {
+      "name": "diagnostico",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "respostas": {
+          "name": "respostas",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "km_mes_faixa": {
+          "name": "km_mes_faixa",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pessoas_transportadas": {
+          "name": "pessoas_transportadas",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "orcamento_min": {
+          "name": "orcamento_min",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "orcamento_max": {
+          "name": "orcamento_max",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "financiamento": {
+          "name": "financiamento",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prioridades": {
+          "name": "prioridades",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "horizonte_posse": {
+          "name": "horizonte_posse",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primeira_compra": {
+          "name": "primeira_compra",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cambio_restricao": {
+          "name": "cambio_restricao",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "combustivel_restricao": {
+          "name": "combustivel_restricao",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categoria_inferida": {
+          "name": "categoria_inferida",
+          "type": "categoria_veiculo",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "diagnostico_usuario_id_usuario_id_fk": {
+          "name": "diagnostico_usuario_id_usuario_id_fk",
+          "tableFrom": "diagnostico",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.interacao": {
+      "name": "interacao",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "veiculo_id": {
+          "name": "veiculo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "interacao_usuario_id_usuario_id_fk": {
+          "name": "interacao_usuario_id_usuario_id_fk",
+          "tableFrom": "interacao",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "interacao_veiculo_id_veiculo_tecnico_id_fk": {
+          "name": "interacao_veiculo_id_veiculo_tecnico_id_fk",
+          "tableFrom": "interacao",
+          "tableTo": "veiculo_tecnico",
+          "columnsFrom": [
+            "veiculo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lead": {
+      "name": "lead",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recomendacao_id": {
+          "name": "recomendacao_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'novo'"
+        },
+        "concessionaria_destino": {
+          "name": "concessionaria_destino",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "lead_usuario_id_usuario_id_fk": {
+          "name": "lead_usuario_id_usuario_id_fk",
+          "tableFrom": "lead",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "lead_recomendacao_id_recomendacao_id_fk": {
+          "name": "lead_recomendacao_id_recomendacao_id_fk",
+          "tableFrom": "lead",
+          "tableTo": "recomendacao",
+          "columnsFrom": [
+            "recomendacao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lista_espera_categoria": {
+      "name": "lista_espera_categoria",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "categoria_veiculo",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "lista_espera_categoria_usuario_id_usuario_id_fk": {
+          "name": "lista_espera_categoria_usuario_id_usuario_id_fk",
+          "tableFrom": "lista_espera_categoria",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.recomendacao": {
+      "name": "recomendacao",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "diagnostico_id": {
+          "name": "diagnostico_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "veiculo_id": {
+          "name": "veiculo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score": {
+          "name": "score",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "motivo": {
+          "name": "motivo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "posicao": {
+          "name": "posicao",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "recomendacao_diagnostico_id_diagnostico_id_fk": {
+          "name": "recomendacao_diagnostico_id_diagnostico_id_fk",
+          "tableFrom": "recomendacao",
+          "tableTo": "diagnostico",
+          "columnsFrom": [
+            "diagnostico_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "recomendacao_veiculo_id_veiculo_tecnico_id_fk": {
+          "name": "recomendacao_veiculo_id_veiculo_tecnico_id_fk",
+          "tableFrom": "recomendacao",
+          "tableTo": "veiculo_tecnico",
+          "columnsFrom": [
+            "veiculo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.usuario": {
+      "name": "usuario",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefone": {
+          "name": "telefone",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cidade": {
+          "name": "cidade",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.veiculo_alias": {
+      "name": "veiculo_alias",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "veiculo_id": {
+          "name": "veiculo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alias": {
+          "name": "alias",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "veiculo_alias_veiculo_id_veiculo_tecnico_id_fk": {
+          "name": "veiculo_alias_veiculo_id_veiculo_tecnico_id_fk",
+          "tableFrom": "veiculo_alias",
+          "tableTo": "veiculo_tecnico",
+          "columnsFrom": [
+            "veiculo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.veiculo_tecnico": {
+      "name": "veiculo_tecnico",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "marca": {
+          "name": "marca",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "modelo": {
+          "name": "modelo",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "versao": {
+          "name": "versao",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ano": {
+          "name": "ano",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "categoria_veiculo",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preco_referencia": {
+          "name": "preco_referencia",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cambio": {
+          "name": "cambio",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "combustivel": {
+          "name": "combustivel",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score_economia": {
+          "name": "score_economia",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score_seguranca": {
+          "name": "score_seguranca",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score_espaco": {
+          "name": "score_espaco",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score_manutencao": {
+          "name": "score_manutencao",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score_revenda": {
+          "name": "score_revenda",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "capacidade_carga_kg": {
+          "name": "capacidade_carga_kg",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tracao_4x4": {
+          "name": "tracao_4x4",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "altura_livre_solo_mm": {
+          "name": "altura_livre_solo_mm",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "autonomia_km": {
+          "name": "autonomia_km",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tempo_recarga_min": {
+          "name": "tempo_recarga_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.categoria_veiculo": {
+      "name": "categoria_veiculo",
+      "schema": "public",
+      "values": [
+        "hatch_sedan_popular",
+        "suv_compacto",
+        "suv_medio",
+        "picape",
+        "eletrico_hibrido"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
