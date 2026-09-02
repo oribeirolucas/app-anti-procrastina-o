@@ -50,7 +50,7 @@ for (const p of profiles) {
         const tick = () => {
           // Teto por tentativa: um jogador bom pode durar minutos e o objetivo
           // aqui é medir a curva de morte, não maratona.
-          if (g.state !== 'playing' || performance.now() - t0 > 12000) {
+          if (g.state !== 'playing' || performance.now() - t0 > 45000) {
             if (g.state === 'playing') g.endRun();
             return resolve(out.push({
               distance: g.player.distance, score: g.score.total,
