@@ -13,7 +13,8 @@ npm run dev        # http://localhost:5180
 npm run build      # bundle de produção
 npm run playtest   # bot automatizado valida os 17 critérios de aceite do MVP
 npm run metatest   # valida Fases 3 e 4 (conteúdo, economia, desafios, rede)
-npm test           # os dois
+npm run entrytest  # prova que ninguém perde antes de encostar na bola
+npm test           # os três
 ```
 
 Abra no celular pela rede local (`npm run dev` já expõe o host) — o jogo foi
@@ -52,7 +53,24 @@ Tudo em `src/data/config.ts`. Os principais:
 abrir → escolher craque → jogar → combo → obstáculos → game over → recorde →
 restart. Inclui checagem de determinismo da física e de frame time sem picos.
 
+`npm run entrytest` mede o caso extremo e determinístico: um jogador que nunca
+toca na tela. Antes da calibração ele morria em **6,1m** — exatamente o número
+que se repetia no playtest humano. Hoje ele sobrevive até tocar na bola.
+
 Requer o dev server rodando (`npm run dev`) em `localhost:5180`.
+
+### O que os testes NÃO medem
+
+**Nível de dificuldade.** Um bot lê o estado exato da física e recebe, no
+máximo, ruído de execução; o erro de um jogador real é de percepção. Um
+simulador com erro gaussiano foi tentado e descartado: ele sobrevivia
+indefinidamente tanto no código antigo quanto no calibrado, porque `BAD` não
+mata e ele corrige a lateral com eficiência sobre-humana — media o cronômetro
+do teste, não a habilidade.
+
+Calibrar `timing.perfect`, `timing.good` e `timing.assist*` exige playtest com
+dedo humano. Os testes garantem que a mecânica funciona e que a entrada é
+justa; se o jogo é *bom* é pergunta para uma pessoa.
 
 ## Conteúdo (Fase 3)
 
