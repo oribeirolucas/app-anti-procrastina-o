@@ -20,9 +20,9 @@ const { gravity } = CONFIG.physics;
  * Determinística: mesmos inputs => mesma trajetória, sempre. Isso é requisito
  * de design (§3): o jogador só pode perder por erro de execução.
  */
-export function integrate(b: BallState, dt: number): void {
+export function integrate(b: BallState, dt: number, dragMultiplier = 1): void {
   b.vy += gravity * dt;
-  b.vx -= b.vx * CONFIG.physics.lateralDrag * dt;
+  b.vx -= b.vx * CONFIG.physics.lateralDrag * dragMultiplier * dt;
   // z é uma mola leve em torno da posição de contato: a bola "respira" à frente
   // do craque sem nunca virar um eixo de falha.
   const zTarget = 2.45;

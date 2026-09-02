@@ -43,7 +43,9 @@ html, body {
   background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.12);
   border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700;
   letter-spacing: 1px; backdrop-filter: blur(4px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw;
 }
+.hud-mid { flex-wrap: nowrap; }
 
 .hud-combo { position: absolute; left: 14px; right: 14px; bottom: calc(18px + var(--safe-bottom)); }
 .combo-row { display: flex; align-items: baseline; gap: 10px; }
@@ -58,7 +60,11 @@ html, body {
 .feedback {
   position: absolute; left: 0; right: 0; top: 38%;
   text-align: center; font-size: 40px; font-weight: 900; letter-spacing: 2px;
-  opacity: 0; text-shadow: 0 4px 16px rgba(0,0,0,0.7);
+  opacity: 0;
+  /* Contorno escuro: o feedback precisa ser legível sobre asfalto E sobre areia. */
+  -webkit-text-stroke: 3px rgba(10,12,18,0.85);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 16px rgba(0,0,0,0.55);
 }
 .feedback.pop { animation: pop 420ms ease-out; }
 .feedback .pts { display: block; font-size: 18px; font-weight: 700; opacity: 0.9; }
@@ -72,6 +78,8 @@ html, body {
   position: absolute; left: 0; right: 0; top: 20%;
   text-align: center; font-size: 26px; font-weight: 900; letter-spacing: 3px;
   color: var(--warn); opacity: 0;
+  -webkit-text-stroke: 3px rgba(10,12,18,0.85);
+  paint-order: stroke fill;
 }
 .toast.show { animation: toast 1100ms ease-out; }
 @keyframes toast {
@@ -118,7 +126,7 @@ html, body {
 .btn.primary.big { font-size: 19px; padding: 18px; }
 .btn.small { font-size: 13px; padding: 10px; letter-spacing: 1px; color: var(--dim); background: transparent; }
 .btn.ghost { opacity: 0.42; }
-.btn:disabled { cursor: not-allowed; }
+.btn:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.9); }
 .soon { font-size: 9px; letter-spacing: 1px; opacity: 0.7; margin-left: 6px; }
 
 .screen-title { margin: 0; font-size: 20px; letter-spacing: 4px; font-weight: 900; }
@@ -140,11 +148,14 @@ html, body {
   width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
   font-weight: 900; font-size: 15px; flex: 0 0 auto;
 }
+/* Reserva o canto do card para a etiqueta de preço. */
 .char-nick { font-size: 13px; font-weight: 900; letter-spacing: 1px; }
+.item-card.locked .char-nick { padding-right: 58px; }
 .char-name { font-size: 11px; color: var(--dim); }
 .char-arch { font-size: 10px; color: var(--dim); margin-bottom: 8px; line-height: 1.4; }
 .attr-row { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--dim); margin-bottom: 3px; }
-.attr-name { width: 62px; letter-spacing: 1px; font-weight: 700; }
+.attr-name { min-width: 62px; letter-spacing: 1px; font-weight: 700; flex: 0 0 auto; }
+.attr-row .row-value { margin-left: auto; font-size: 10px; }
 .attr-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
 .attr-fill { height: 100%; background: var(--accent); }
 
@@ -177,3 +188,69 @@ html, body {
   text-align: center; font-size: 14px; font-weight: 900; letter-spacing: 3px;
   color: var(--accent); animation: toast 1400ms ease-out infinite;
 }
+
+/* ---------- Fases 3 e 4 ---------- */
+.wallet {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(245,197,24,0.12); border: 1px solid rgba(245,197,24,0.35);
+  border-radius: 999px; padding: 5px 14px; font-weight: 800; font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.wallet .coin { color: #f5c518; font-size: 17px; }
+
+.event-banner {
+  width: min(340px, 100%); text-align: center; border-radius: 12px; padding: 10px 14px;
+  background: linear-gradient(90deg, rgba(125,252,176,0.18), rgba(245,197,24,0.18));
+  border: 1px solid rgba(125,252,176,0.4);
+}
+.event-banner b { display: block; font-size: 13px; letter-spacing: 2px; }
+.event-banner span { font-size: 11px; color: var(--dim); }
+
+.hud-chip.event { background: rgba(125,252,176,0.2); border-color: rgba(125,252,176,0.5); color: var(--accent); }
+
+.badge {
+  display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 8px;
+  border-radius: 999px; background: var(--bad); color: #fff; font-size: 10px; vertical-align: middle;
+}
+
+.tabs { display: flex; gap: 6px; width: min(680px, 100%); }
+.tab {
+  flex: 1; appearance: none; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px;
+  background: transparent; color: var(--dim); font-size: 12px; font-weight: 800;
+  letter-spacing: 1px; padding: 9px 4px; cursor: pointer;
+}
+.tab.active { background: rgba(125,252,176,0.14); border-color: var(--accent); color: var(--ink); }
+
+.screen-hint { margin: 0; font-size: 11px; color: var(--dim); text-align: center; max-width: 340px; }
+
+.list { display: flex; flex-direction: column; gap: 8px; width: min(420px, 100%); max-height: 52vh; overflow-y: auto; }
+.list-row {
+  display: flex; align-items: center; gap: 10px; padding: 11px 13px;
+  border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+}
+.list-row.done { border-color: rgba(125,252,176,0.45); background: rgba(125,252,176,0.09); }
+.list-row.self { border-color: var(--accent); background: rgba(125,252,176,0.12); }
+.row-main { flex: 1; min-width: 0; }
+.row-title { font-size: 13px; font-weight: 700; }
+.row-sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.row-value { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.row-rank { width: 26px; text-align: center; font-weight: 900; color: var(--dim); }
+.row-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); margin-top: 6px; overflow: hidden; }
+.row-fill { height: 100%; background: var(--accent); }
+
+.item-card { position: relative; }
+.item-card .price {
+  position: absolute; top: 10px; right: 10px; font-size: 10px; font-weight: 800;
+  color: #f5c518; background: rgba(245,197,24,0.14); border-radius: 999px; padding: 3px 8px;
+}
+.item-card.locked { opacity: 0.72; }
+.item-card.locked.affordable { opacity: 1; border-color: rgba(245,197,24,0.5); }
+.item-swatch { width: 38px; height: 38px; border-radius: 999px; flex: 0 0 auto; border: 2px solid rgba(0,0,0,0.35); }
+.item-scene { width: 46px; height: 34px; border-radius: 8px; flex: 0 0 auto; }
+
+.go-extra { width: min(340px, 100%); display: flex; flex-direction: column; gap: 6px; }
+.reward-row {
+  display: flex; justify-content: space-between; padding: 9px 12px; border-radius: 10px;
+  background: rgba(245,197,24,0.12); font-size: 13px; font-weight: 700;
+}
+.challenge-done { font-size: 11px; color: var(--accent); text-align: center; letter-spacing: 1px; }

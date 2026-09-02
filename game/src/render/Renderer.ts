@@ -5,6 +5,7 @@ import type { PlayerController } from '../gameplay/PlayerController';
 import type { BallController } from '../gameplay/BallController';
 import type { Character } from '../data/characters';
 import { clamp } from '../core/math';
+import type { Scene } from '../data/scenes';
 
 type P = { sx: number; sy: number; scale: number };
 
@@ -49,11 +50,12 @@ export class Renderer {
     const w = camera.viewWidth;
     const h = camera.viewHeight;
     const horizon = this.horizonY(camera, h);
+    const scene = level.activeScene;
 
-    this.drawSky(ctx, w, h, horizon);
-    this.drawSkyline(ctx, w, horizon, player.distance);
-    this.drawGround(ctx, w, h, horizon);
-    this.drawRoad(ctx, camera, level, player);
+    this.drawSky(ctx, w, h, horizon, scene);
+    this.drawSkyline(ctx, w, horizon, player.distance, scene);
+    this.drawGround(ctx, w, h, horizon, scene);
+    this.drawRoad(ctx, camera, level, player, scene);
 
     // Painter: mais longe primeiro.
     this.drawList.length = 0;
@@ -65,7 +67,7 @@ export class Renderer {
       }
     }
     this.drawList.sort((a, b) => b.z - a.z);
-    for (const p of this.drawList) this.drawProp(ctx, camera, p, timeOfRun);
+    for (const p of this.drawList) this.drawProp(ctx, camera, p, timeOfRun, scene);
 
     this.drawBallShadow(ctx, camera, ball, player);
     this.drawPlayer(ctx, camera, player, character);
@@ -78,11 +80,11 @@ export class Renderer {
     return far ? far.sy : h * 0.4;
   }
 
-  private drawSky(ctx: CanvasRenderingContext2D, w: number, h: number, horizon: number): void {
+  private drawSky(ctx: CanvasRenderingContext2D, w: number, h: number, horizon: number, scene: Scene): void {
     const g = ctx.createLinearGradient(0, 0, 0, Math.max(horizon, 1));
-    g.addColorStop(0, '#1b2a52');
-    g.addColorStop(0.55, '#3d5c8f');
-    g.addColorStop(1, '#f0a75e');
+    g.addColorStop(0, scene.sky.top);
+    g.addColorStop(0.55, scene.sky.middle);
+    g.addColorStop(1, scene.sky.bottom);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, Math.max(horizon, 0));
     if (horizon < h) {
@@ -92,9 +94,9 @@ export class Renderer {
   }
 
   /** Skyline parallax: barato e vende a ideia de cidade grande. */
-  private drawSkyline(ctx: CanvasRenderingContext2D, w: number, horizon: number, distance: number): void {
+  private drawSkyline(ctx: CanvasRenderingContext2D, w: number, horizon: number, distance: number, scene: Scene): void {
     const offset = (distance * 1.6) % 200;
-    ctx.fillStyle = '#243256';
+    ctx.fillStyle = scene.skyline;
     for (let i = 0; i < this.skylineSeed.length; i++) {
       const s = this.skylineSeed[i];
       const bw = 24 + s * 40;
@@ -104,10 +106,10 @@ export class Renderer {
     }
   }
 
-  private drawGround(ctx: CanvasRenderingContext2D, w: number, h: number, horizon: number): void {
+  private drawGround(ctx: CanvasRenderingContext2D, w: number, h: number, horizon: number, scene: Scene): void {
     const g = ctx.createLinearGradient(0, horizon, 0, h);
-    g.addColorStop(0, '#5c6473');
-    g.addColorStop(1, '#7a8496');
+    g.addColorStop(0, scene.ground.far);
+    g.addColorStop(1, scene.ground.near);
     ctx.fillStyle = g;
     ctx.fillRect(0, horizon, w, h - horizon);
   }
@@ -128,6 +130,7 @@ export class Renderer {
     cam: Camera,
     level: LevelGenerator,
     player: PlayerController,
+    scene: Scene,
   ): void {
     const road = CONFIG.world.roadHalfWidth;
     const walk = road + CONFIG.world.sidewalkWidth;
@@ -152,7 +155,7 @@ export class Renderer {
         const b = cam.project(outer, 0.14, z1);
         const c = cam.project(outer, 0.14, z0);
         const d = cam.project(inner, 0.14, z0);
-        if (a && b && c && d) this.quad(ctx, a, b, c, d, s.parity ? '#b9bfc9' : '#b3b9c3');
+        if (a && b && c && d) this.quad(ctx, a, b, c, d, s.parity ? scene.sidewalk.a : scene.sidewalk.b);
       }
 
       const rfl = cam.project(-road, 0, z1);
@@ -160,7 +163,7 @@ export class Renderer {
       const rnl = cam.project(-road, 0, z0);
       const rnr = cam.project(road, 0, z0);
       if (!rfl || !rfr || !rnl || !rnr) continue;
-      this.quad(ctx, rfl, rfr, rnr, rnl, s.parity ? '#3a3f4b' : '#363b46');
+      this.quad(ctx, rfl, rfr, rnr, rnl, s.parity ? scene.road.a : scene.road.b);
 
       // Faixa central tracejada.
       if (s.parity && z1 - z0 > 6.5) {
@@ -168,7 +171,7 @@ export class Renderer {
         const cfr = cam.project(0.12, 0.01, z1 - 3);
         const cnl = cam.project(-0.12, 0.01, z0 + 3);
         const cnr = cam.project(0.12, 0.01, z0 + 3);
-        if (cfl && cfr && cnl && cnr) this.quad(ctx, cfl, cfr, cnr, cnl, '#e8d98a');
+        if (cfl && cfr && cnl && cnr) this.quad(ctx, cfl, cfr, cnr, cnl, scene.laneMark);
       }
       // Meio-fio.
       for (const side of [-1, 1] as const) {
@@ -176,7 +179,7 @@ export class Renderer {
         const b = cam.project(side * (road + 0.25), 0.14, z1);
         const c = cam.project(side * (road + 0.25), 0.14, z0);
         const d = cam.project(side * road, 0.14, z0);
-        if (a && b && c && d) this.quad(ctx, a, b, c, d, '#d8dce3');
+        if (a && b && c && d) this.quad(ctx, a, b, c, d, scene.curb);
       }
     }
   }
@@ -200,7 +203,7 @@ export class Renderer {
     this.quad(ctx, tl, tr, br, bl, front);
   }
 
-  private drawProp(ctx: CanvasRenderingContext2D, cam: Camera, p: Prop, t: number): void {
+  private drawProp(ctx: CanvasRenderingContext2D, cam: Camera, p: Prop, t: number, scene: Scene): void {
     switch (p.kind) {
       case 'building': {
         this.box(ctx, cam, p.x, 0, p.z, p.width, p.height, p.depth, p.color, '#8a94aa');
@@ -218,10 +221,38 @@ export class Renderer {
         const cw = wpx / cols, ch = hpx / rows;
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            const lit = ((r * 7 + c * 13 + Math.floor(p.phase * 100)) % 5) < 2;
+            const lit = scene.litWindows && ((r * 7 + c * 13 + Math.floor(p.phase * 100)) % 5) < 2;
             ctx.fillStyle = lit ? 'rgba(244,217,138,0.85)' : 'rgba(20,26,40,0.55)';
             ctx.fillRect(base.sx + c * cw + cw * 0.22, topP.sy + r * ch + ch * 0.22, cw * 0.56, ch * 0.5);
           }
+        }
+        break;
+      }
+      case 'palm': {
+        // Coqueiro: tronco fino levemente inclinado + folhas em leque.
+        this.box(ctx, cam, p.x, 0, p.z, p.width, p.height, p.depth, '#8a6a3f', '#a07f4d');
+        const top = cam.project(p.x, p.height, p.z);
+        if (!top) return;
+        ctx.fillStyle = p.color;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + p.phase;
+          ctx.beginPath();
+          ctx.ellipse(
+            top.sx + Math.cos(a) * 1.1 * top.scale, top.sy + Math.sin(a) * 0.45 * top.scale,
+            Math.max(3, 1.0 * top.scale), Math.max(2, 0.3 * top.scale), a, 0, Math.PI * 2,
+          );
+          ctx.fill();
+        }
+        break;
+      }
+      case 'bleacher': {
+        // Arquibancada: três degraus em profundidade.
+        for (let i = 0; i < 3; i++) {
+          this.box(
+            ctx, cam, p.x, i * (p.height / 3), p.z + i * 1.1,
+            p.width, p.height / 3, p.depth / 3,
+            i % 2 ? p.color : this.shade(p.color, 1.15), this.shade(p.color, 1.3),
+          );
         }
         break;
       }
@@ -374,7 +405,7 @@ export class Renderer {
     const tight = clamp(1 - s.y / 2.6, 0.25, 1);
     ctx.fillStyle = `rgba(0,0,0,${0.34 * tight})`;
     ctx.beginPath();
-    ctx.ellipse(p.sx, p.sy, CONFIG.ball.radius * 1.7 * p.scale * tight, CONFIG.ball.radius * 0.8 * p.scale * tight, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.sx, p.sy, ball.radius * 1.7 * p.scale * tight, ball.radius * 0.8 * p.scale * tight, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -383,29 +414,67 @@ export class Renderer {
     ball: BallController, player: PlayerController,
   ): void {
     const s = ball.state;
+    const skin = ball.equipped;
     const p = cam.project(s.x, s.y, player.distance + s.z);
     if (!p) return;
-    const r = Math.max(4, CONFIG.ball.radius * p.scale);
+    const r = Math.max(4, skin.radius * p.scale);
 
     // Halo: a bola precisa ser trivial de acompanhar (§17).
     const halo = ctx.createRadialGradient(p.sx, p.sy, r * 0.8, p.sx, p.sy, r * 2.6);
-    halo.addColorStop(0, 'rgba(255,255,255,0.30)');
+    halo.addColorStop(0, skin.colors.glow);
     halo.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = halo;
     ctx.beginPath(); ctx.arc(p.sx, p.sy, r * 2.6, 0, Math.PI * 2); ctx.fill();
 
-    ctx.fillStyle = '#fdfdfd';
+    ctx.fillStyle = skin.colors.base;
     ctx.beginPath(); ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2); ctx.fill();
 
-    // Pentágonos girando: leitura instantânea da rotação.
-    ctx.fillStyle = '#171a21';
+    // O padrão gira junto com a bola: leitura instantânea da rotação.
+    ctx.save();
+    ctx.beginPath(); ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = skin.colors.accent;
     const spin = s.spin;
-    for (let i = 0; i < 4; i++) {
-      const a = spin + (i * Math.PI) / 2;
-      const px = p.sx + Math.cos(a) * r * 0.52;
-      const py = p.sy + Math.sin(a) * r * 0.52;
-      ctx.beginPath(); ctx.arc(px, py, r * 0.26, 0, Math.PI * 2); ctx.fill();
+    switch (skin.pattern) {
+      case 'classic':
+        for (let i = 0; i < 4; i++) {
+          const a = spin + (i * Math.PI) / 2;
+          ctx.beginPath();
+          ctx.arc(p.sx + Math.cos(a) * r * 0.52, p.sy + Math.sin(a) * r * 0.52, r * 0.26, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      case 'stripes':
+        for (let i = 0; i < 3; i++) {
+          const off = (((spin * 0.35 + i / 3) % 1) * 2 - 1) * r;
+          ctx.fillRect(p.sx + off - r * 0.16, p.sy - r, r * 0.32, r * 2);
+        }
+        break;
+      case 'grid':
+        ctx.lineWidth = Math.max(1, r * 0.1);
+        ctx.strokeStyle = skin.colors.accent;
+        for (let i = -1; i <= 1; i++) {
+          const off = (((spin * 0.3 + (i + 1) / 3) % 1) * 2 - 1) * r;
+          ctx.beginPath(); ctx.moveTo(p.sx + off, p.sy - r); ctx.lineTo(p.sx + off, p.sy + r); ctx.stroke();
+        }
+        break;
+      case 'flame':
+        for (let i = 0; i < 3; i++) {
+          const a = spin * 1.4 + (i * Math.PI * 2) / 3;
+          ctx.beginPath();
+          ctx.ellipse(p.sx + Math.cos(a) * r * 0.4, p.sy + Math.sin(a) * r * 0.4, r * 0.42, r * 0.16, a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      case 'solid':
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath();
+        ctx.arc(p.sx + Math.cos(spin) * r * 0.35, p.sy + Math.sin(spin) * r * 0.35, r * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        break;
     }
+    ctx.restore();
+
     ctx.strokeStyle = 'rgba(10,12,18,0.75)';
     ctx.lineWidth = Math.max(1.5, r * 0.13);
     ctx.beginPath(); ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2); ctx.stroke();
@@ -424,7 +493,7 @@ export class Renderer {
     if (err > 0.16) return;            // já passou: sem anel
     const p = cam.project(s.x, s.y, player.distance + s.z);
     if (!p) return;
-    const r = Math.max(4, CONFIG.ball.radius * p.scale);
+    const r = Math.max(4, ball.radius * p.scale);
     const t = clamp(-err / 0.45, 0, 1); // 1 = longe, 0 = agora
     const ringR = r * (1.5 + t * 3.4);
     const inWindow = Math.abs(err) <= CONFIG.timing.good;

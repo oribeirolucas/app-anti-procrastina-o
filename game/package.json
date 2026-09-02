@@ -9,7 +9,9 @@
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "playtest": "node tests/playtest.mjs",
-    "shots": "node tests/shots.mjs ."
+    "shots": "node tests/shots.mjs . && node tests/shots-meta.mjs .",
+    "metatest": "node tests/meta.mjs",
+    "test": "node tests/playtest.mjs && node tests/meta.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

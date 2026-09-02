@@ -27,6 +27,7 @@
         <div class="hud-mid">
           <div class="hud-chip"><span id="hud-distance">0m</span></div>
           <div class="hud-chip" id="hud-tier">AQUECIMENTO</div>
+          <div class="hud-chip event hidden" id="hud-event"></div>
         </div>
         <div class="hud-combo">
           <div class="combo-row">
@@ -46,23 +47,69 @@
           <p class="tagline">JOGO DE EMBAIXADINHAS</p>
         </div>
         <div class="menu-record" id="menu-record"></div>
+        <div class="wallet"><span class="coin">◎</span><span id="menu-coins">0</span></div>
+        <div class="event-banner hidden" id="event-banner"></div>
         <div class="menu-buttons">
           <button class="btn primary" id="btn-play">JOGAR</button>
           <button class="btn" id="btn-characters">JOGADORES</button>
-          <button class="btn ghost" id="btn-challenges" disabled>DESAFIOS <span class="soon">EM BREVE</span></button>
-          <button class="btn ghost" id="btn-ranking" disabled>RANKING <span class="soon">EM BREVE</span></button>
-          <button class="btn ghost" id="btn-custom" disabled>PERSONALIZAÇÃO <span class="soon">EM BREVE</span></button>
+          <button class="btn" id="btn-challenges">DESAFIOS <span class="badge hidden" id="challenge-badge"></span></button>
+          <button class="btn" id="btn-ranking">RANKING</button>
+          <button class="btn" id="btn-custom">PERSONALIZAÇÃO</button>
+          <button class="btn" id="btn-store">LOJA</button>
           <button class="btn small" id="btn-sound">SOM: LIGADO</button>
         </div>
       </div>
 
       <!-- Seleção de personagem (§12) -->
       <div id="characters" class="layer screen hidden">
-        <h2 class="screen-title">ESCOLHA SEU CRAQUE</h2>
+        <h2 class="screen-title">SEU LOADOUT</h2>
+        <div class="wallet"><span class="coin">◎</span><span id="loadout-coins">0</span></div>
+        <div class="tabs">
+          <button class="tab active" data-tab="characters">CRAQUES</button>
+          <button class="tab" data-tab="balls">BOLAS</button>
+          <button class="tab" data-tab="scenes">CENÁRIOS</button>
+        </div>
         <div class="char-grid" id="char-grid"></div>
         <div class="screen-actions">
           <button class="btn primary" id="btn-char-play">JOGAR AGORA</button>
           <button class="btn small" id="btn-char-back">VOLTAR</button>
+        </div>
+      </div>
+
+      <!-- Desafios (§23) -->
+      <div id="challenges" class="layer screen hidden">
+        <h2 class="screen-title">DESAFIOS DO DIA</h2>
+        <p class="screen-hint">Renovam todo dia à meia-noite (UTC).</p>
+        <div class="list" id="challenge-list"></div>
+        <div class="screen-actions">
+          <button class="btn primary" id="btn-claim">RESGATAR RECOMPENSAS</button>
+          <button class="btn small" id="btn-challenges-back">VOLTAR</button>
+        </div>
+      </div>
+
+      <!-- Ranking (Fase 4) -->
+      <div id="ranking" class="layer screen hidden">
+        <h2 class="screen-title">RANKING</h2>
+        <div class="tabs">
+          <button class="tab active" data-period="daily">HOJE</button>
+          <button class="tab" data-period="alltime">GERAL</button>
+        </div>
+        <div class="list" id="ranking-list"></div>
+        <p class="screen-hint" id="ranking-source"></p>
+        <div class="screen-actions">
+          <button class="btn" id="btn-duel">DUELAR COM UM AMIGO</button>
+          <button class="btn small" id="btn-ranking-back">VOLTAR</button>
+        </div>
+      </div>
+
+      <!-- Loja (Fase 4) -->
+      <div id="store" class="layer screen hidden">
+        <h2 class="screen-title">LOJA</h2>
+        <div class="wallet"><span class="coin">◎</span><span id="store-coins">0</span></div>
+        <div class="list" id="store-list"></div>
+        <p class="screen-hint">Pagamento em ambiente de desenvolvimento: nenhuma cobrança real é feita.</p>
+        <div class="screen-actions">
+          <button class="btn small" id="btn-store-back">VOLTAR</button>
         </div>
       </div>
 
@@ -83,6 +130,7 @@
       <div id="gameover" class="layer screen hidden">
         <h2 class="go-title">BOLA NO CHÃO!</h2>
         <div class="go-stats" id="go-stats"></div>
+        <div class="go-extra" id="go-extra"></div>
         <div class="screen-actions">
           <button class="btn primary big" id="btn-retry">TENTAR NOVAMENTE</button>
           <button class="btn" id="btn-go-characters">ESCOLHER JOGADOR</button>

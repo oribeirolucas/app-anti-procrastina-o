@@ -4,7 +4,10 @@ export type GameState =
   | 'characters'
   | 'tutorial'
   | 'playing'
-  | 'gameover';
+  | 'gameover'
+  | 'challenges'
+  | 'ranking'
+  | 'store';
 
 /** Qualidade de um toque na bola (§3 do brief). */
 export type TouchQuality = 'PERFECT' | 'GOOD' | 'BAD' | 'MISS';

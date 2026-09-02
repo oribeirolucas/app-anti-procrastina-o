@@ -28,9 +28,11 @@ check('1. Jogo abre no menu', await page.isVisible('#menu'));
 await page.click('#btn-characters');
 await page.waitForTimeout(150);
 const cards = await page.locator('.char-card').count();
-check('2. Seleção de personagem lista craques', cards === 6, `${cards} cards`);
-await page.locator('.char-card').nth(3).click();
-check('2b. Personagem fica selecionado', await page.locator('.char-card').nth(3).evaluate((n) => n.classList.contains('selected')));
+check('2. Seleção de personagem lista craques', cards === 12, `${cards} cards`);
+// Escolhe um craque desbloqueado — os pagos são exercitados em tests/meta.mjs.
+const free = page.locator('.char-card:not(.locked)').nth(1);
+await free.click();
+check('2b. Personagem fica selecionado', await free.evaluate((n) => n.classList.contains('selected')));
 
 // 3. Iniciar partida (passando pelo tutorial na primeira vez)
 await page.click('#btn-char-play');
@@ -47,11 +49,11 @@ const readState = () => page.evaluate(() => {
   return {
     state: g.state,
     dist: g.player.distance,
-    ballY: g.ball.state.y,
-    ballX: g.ball.state.x,
+    ballY: g.ballController.state.y,
+    ballX: g.ballController.state.x,
     playerX: g.player.x,
-    err: g.ball.timingErrorNow(),
-    reach: g.ball.canReach(g.player.x),
+    err: g.ballController.timingErrorNow(),
+    reach: g.ballController.canReach(g.player.x),
     score: g.score.total,
     streak: g.combo.current,
     mult: g.combo.multiplier,
@@ -102,20 +104,20 @@ const play = await page.evaluate(({ durationMs, targetStreak }) => new Promise((
   const tick = () => {
     frames++;
     if (g.state !== 'playing') return resolve({ taps, maxStreak, minBallY, ended: true, frames, ms: performance.now() - t0 });
-    const err = g.ball.timingErrorNow();
+    const err = g.ballController.timingErrorNow();
     // Toca assim que o instante ideal chega (err >= 0 = agora ou levemente tarde).
     // Um bot que só aceitasse |err| <= 0.02 dependeria do framerate do runner,
     // não da mecânica.
-    if (g.ball.canReach(g.player.x) && err >= -0.012) {
+    if (g.ballController.canReach(g.player.x) && err >= -0.012) {
       // Jogador competente: corrige a trajetória com swipe quando a bola foge
       // do eixo, em vez de só martelar tap.
-      const off = g.ball.state.x;
+      const off = g.ballController.state.x;
       if (Math.abs(off) > 0.3) swipe(off > 0 ? -1 : 1);
       else tap();
       taps++;
     }
     maxStreak = Math.max(maxStreak, g.combo.current);
-    minBallY = Math.min(minBallY, g.ball.state.y);
+    minBallY = Math.min(minBallY, g.ballController.state.y);
     if (performance.now() - t0 > durationMs || g.combo.current >= targetStreak) {
       return resolve({ taps, maxStreak, minBallY, ended: false, frames, ms: performance.now() - t0 });
     }

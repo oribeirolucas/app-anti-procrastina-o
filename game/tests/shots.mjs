@@ -16,10 +16,10 @@ await page.evaluate(() => new Promise((res) => {
   const t0 = performance.now();
   const tick = () => {
     if (g.state !== 'playing') return res();
-    const err = g.ball.timingErrorNow();
-    if (g.ball.canReach(g.player.x) && err >= -0.012) {
+    const err = g.ballController.timingErrorNow();
+    if (g.ballController.canReach(g.player.x) && err >= -0.012) {
       const o = { pointerId:1, pointerType:'touch', isPrimary:true, bubbles:true, clientX:cx, clientY:cy };
-      const off = g.ball.state.x;
+      const off = g.ballController.state.x;
       c.dispatchEvent(new PointerEvent('pointerdown', o));
       if (Math.abs(off) > 0.3) c.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: cx + (off>0?-90:90) }));
       c.dispatchEvent(new PointerEvent('pointerup', o));

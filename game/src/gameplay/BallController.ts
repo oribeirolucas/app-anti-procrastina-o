@@ -1,5 +1,6 @@
 import { CONFIG } from '../data/config';
 import type { Character } from '../data/characters';
+import { getBall, type Ball } from '../data/balls';
 import type { TouchQuality, TouchResult } from '../core/types';
 import { clamp, sign } from '../core/math';
 import {
@@ -25,6 +26,7 @@ export class BallController {
   readonly state: BallState = { x: CONFIG.ball.footOffset, y: 1.0, z: 2.45, vx: 0, vy: 0, vz: 0, spin: 0 };
 
   private character: Character;
+  private ball: Ball;
   /** Instabilidade acumulada: cresce com toques ruins e com a dificuldade. */
   private instability = 0;
   /** Toques desperdiçados desde o último contato — trava o spam de tap. */
@@ -34,12 +36,18 @@ export class BallController {
   /** Drift imposto pelo DifficultyManager (m/s por toque). */
   driftPerTouch = 0;
 
-  constructor(character: Character) {
+  constructor(character: Character, ball: Ball = getBall('street')) {
     this.character = character;
+    this.ball = ball;
   }
 
-  reset(character: Character): void {
+  /** Raio efetivo da bola equipada — o Renderer e a detecção de queda usam este. */
+  get radius(): number { return this.ball.radius; }
+  get equipped(): Ball { return this.ball; }
+
+  reset(character: Character, ball: Ball = this.ball): void {
     this.character = character;
+    this.ball = ball;
     const s = this.state;
     s.x = CONFIG.ball.footOffset; s.y = 1.35; s.z = 2.45;
     s.vx = 0; s.vy = 0; s.vz = 0; s.spin = 0;
@@ -51,12 +59,12 @@ export class BallController {
   }
 
   update(dt: number): void {
-    integrate(this.state, dt);
+    integrate(this.state, dt, this.ball.drag);
   }
 
   /** True quando a bola encostou no asfalto — condição única de Game Over. */
   hasFallen(): boolean {
-    return this.state.y <= CONFIG.physics.groundY + CONFIG.ball.radius;
+    return this.state.y <= CONFIG.physics.groundY + this.ball.radius;
   }
 
   get timeToGround(): number { return timeToGround(this.state); }
@@ -77,7 +85,7 @@ export class BallController {
     const dx = Math.abs(s.x - this.anchorX(playerX));
     return dx <= CONFIG.ball.reachX * this.character.attributes.precisao
       && s.y <= CONFIG.ball.reachYMax
-      && s.y > CONFIG.physics.groundY + CONFIG.ball.radius;
+      && s.y > CONFIG.physics.groundY + this.ball.radius;
   }
 
   /**
@@ -114,10 +122,12 @@ export class BallController {
     this.touchCount++;
     this.lastQuality = quality;
 
-    const points =
+    // O bônus da bola premia quem escolhe um equipamento mais difícil.
+    const basePoints =
       quality === 'PERFECT' ? CONFIG.score.perfect
       : quality === 'GOOD' ? CONFIG.score.good
       : CONFIG.score.bad;
+    const points = Math.max(1, basePoints + (quality === 'BAD' ? 0 : this.ball.scoreBonus));
 
     return { quality, timingError, height: s.y, points };
   }
@@ -134,7 +144,7 @@ export class BallController {
 
     const swipeUp = input.gesture === 'up';
     const powerBonus = swipeUp ? 1 + (b.swipeUpImpulse - 1) * clamp(input.power, 0.3, 1) : 1;
-    s.vy = b.baseImpulse * factor * powerBonus;
+    s.vy = b.baseImpulse * this.ball.impulse * factor * powerBonus;
     s.vz += 0.4;
 
     // Correção lateral explícita do jogador (§4).
@@ -153,7 +163,7 @@ export class BallController {
     } else {
       // BAD: a bola sai torta e mais baixa — o próximo toque fica mais difícil.
       const dir = sign(s.x - playerX) || (this.touchCount % 2 === 0 ? 1 : -1);
-      s.vx += dir * (b.badLateralKick / attr.tecnica) * (1 + this.instability * 0.3);
+      s.vx += dir * (b.badLateralKick * this.ball.chaos / attr.tecnica) * (1 + this.instability * 0.3);
       this.instability = Math.min(3, this.instability + 0.5);
     }
 

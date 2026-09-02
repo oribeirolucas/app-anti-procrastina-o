@@ -7,7 +7,7 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.click('#btn-play');
 await page.waitForTimeout(200);
 // Congela em fases específicas do arco para inspecionar legibilidade.
-for (const [name, cond] of [['apex', 'g.ball.state.vy <= 0 && g.ball.state.y > 1.3'], ['contato', 'Math.abs(g.ball.timingErrorNow()) < 0.02']]) {
+for (const [name, cond] of [['apex', 'g.ballController.state.vy <= 0 && g.ballController.state.y > 1.3'], ['contato', 'Math.abs(g.ballController.timingErrorNow()) < 0.02']]) {
   await page.evaluate(([c]) => new Promise((res) => {
     const g = window.game, cv = document.querySelector('#stage');
     const r = cv.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height*0.7;
@@ -15,11 +15,11 @@ for (const [name, cond] of [['apex', 'g.ball.state.vy <= 0 && g.ball.state.y > 1
     const tick = () => {
       if (g.state !== 'playing') return res();
       if (g.player.distance > 40 && test(g)) { g.state = 'paused'; return res(); }
-      const err = g.ball.timingErrorNow();
-      if (g.ball.canReach(g.player.x) && err >= -0.012) {
+      const err = g.ballController.timingErrorNow();
+      if (g.ballController.canReach(g.player.x) && err >= -0.012) {
         const o = { pointerId:1, pointerType:'touch', isPrimary:true, bubbles:true, clientX:cx, clientY:cy };
         cv.dispatchEvent(new PointerEvent('pointerdown', o));
-        const off = g.ball.state.x;
+        const off = g.ballController.state.x;
         if (Math.abs(off) > 0.3) cv.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: cx + (off>0?-90:90) }));
         cv.dispatchEvent(new PointerEvent('pointerup', o));
       }

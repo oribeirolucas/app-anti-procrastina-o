@@ -43,6 +43,18 @@ export class SaveManager {
   markTutorialSeen(): void { this.storage.write('tutorial', true); }
 
   get selectedCharacter(): string { return this.records.lastCharacterId; }
+
+  /** §24 — loadout escolhido pelo jogador (craque + bola + cenário). */
+  get loadout(): { ballId: string; sceneId: string } {
+    return this.storage.read<{ ballId: string; sceneId: string }>('loadout')
+      ?? { ballId: 'street', sceneId: 'rua' };
+  }
+
+  setLoadout(patch: Partial<{ ballId: string; sceneId: string }>): void {
+    this.storage.write('loadout', { ...this.loadout, ...patch });
+  }
+
+  get storageAdapter(): StorageAdapter { return this.storage; }
   selectCharacter(id: string): void {
     this.records.lastCharacterId = id;
     this.persist();

@@ -1,10 +1,12 @@
 import { CONFIG } from '../data/config';
 import { createRng, randRange, pick } from '../core/math';
+import { getScene, type Scene } from '../data/scenes';
 import { ObjectPool } from '../core/ObjectPool';
 
 export type PropKind =
   | 'building' | 'tree' | 'pole' | 'bench' | 'bin' | 'sign'
-  | 'car' | 'pedestrian' | 'hydrant' | 'cone' | 'bike' | 'scooter' | 'pothole';
+  | 'car' | 'pedestrian' | 'hydrant' | 'cone' | 'bike' | 'scooter' | 'pothole'
+  | 'palm' | 'bleacher';
 
 export interface Prop {
   kind: PropKind;
@@ -32,7 +34,6 @@ export interface Segment {
   parity: number;
 }
 
-const BUILDING_COLORS = ['#3b4a63', '#44506b', '#4d5a75', '#37435c', '#5a6480'];
 const CAR_COLORS = ['#d94f45', '#3f7fd9', '#e8b02b', '#4a4a52', '#e6e6ea', '#2fa36b'];
 const SHIRT_COLORS = ['#e8734a', '#5aa9e6', '#f2c14e', '#8b6fd6', '#54c08a', '#e0577f'];
 
@@ -46,6 +47,7 @@ export class LevelGenerator {
   private nextZ = 0;
   private parity = 0;
   private propPool: ObjectPool<Prop>;
+  private scene: Scene = getScene('rua');
 
   constructor() {
     this.propPool = new ObjectPool<Prop>(
@@ -58,7 +60,10 @@ export class LevelGenerator {
     );
   }
 
-  reset(seed = Math.floor(Math.random() * 1e9)): void {
+  get activeScene(): Scene { return this.scene; }
+
+  reset(seed = Math.floor(Math.random() * 1e9), scene: Scene = this.scene): void {
+    this.scene = scene;
     for (const s of this.segments) for (const p of s.props) this.propPool.release(p);
     this.segments.length = 0;
     this.rng = createRng(seed);
@@ -111,30 +116,35 @@ export class LevelGenerator {
     const road = CONFIG.world.roadHalfWidth;
     const walk = road + CONFIG.world.sidewalkWidth;
 
-    // Prédios nos dois lados — cria o "corredor" urbano.
+    // Volumes altos dos dois lados — é o que cria o "corredor" e dá a sensação
+    // de velocidade. O tipo vem do cenário: prédio, coqueiro ou arquibancada.
     for (const side of [-1, 1] as const) {
       const count = 1 + Math.floor(rng() * 2);
       for (let i = 0; i < count; i++) {
         const p = this.propPool.acquire();
-        p.kind = 'building';
+        p.kind = this.scene.structure;
         p.x = side * (walk + randRange(rng, 3.5, 7));
         p.z = z + randRange(rng, 0, CONFIG.world.segmentLength);
-        p.width = randRange(rng, 6, 11);
-        p.height = randRange(rng, 9, 26);
-        p.depth = randRange(rng, 6, 10);
-        p.color = pick(rng, BUILDING_COLORS);
+        if (this.scene.structure === 'palm') {
+          p.width = 0.45; p.height = randRange(rng, 6, 10); p.depth = 0.45;
+        } else if (this.scene.structure === 'bleacher') {
+          p.width = randRange(rng, 8, 12); p.height = randRange(rng, 3, 5); p.depth = randRange(rng, 5, 8);
+        } else {
+          p.width = randRange(rng, 6, 11); p.height = randRange(rng, 9, 26); p.depth = randRange(rng, 6, 10);
+        }
+        p.color = pick(rng, this.scene.structureColors);
         p.accent = '#f4d98a';
         p.phase = rng();
         seg.props.push(p);
       }
     }
 
-    // Mobiliário urbano na calçada (decorativo, não colide).
-    const street: PropKind[] = ['tree', 'pole', 'bench', 'bin', 'sign', 'hydrant'];
+    // Mobiliário na calçada (decorativo, não colide).
     const decorCount = 1 + Math.floor(rng() * 3);
     for (let i = 0; i < decorCount; i++) {
       const p = this.propPool.acquire();
-      p.kind = pick(rng, street);
+      p.kind = pick(rng, this.scene.decor);
+      if (p.kind === 'car') { p.kind = 'bench'; }
       const side = rng() < 0.5 ? -1 : 1;
       p.x = side * randRange(rng, road + 0.5, walk - 0.2);
       p.z = z + randRange(rng, 0, CONFIG.world.segmentLength);
@@ -147,7 +157,7 @@ export class LevelGenerator {
     }
 
     // Carros estacionados junto ao meio-fio.
-    if (rng() < 0.55) {
+    if (this.scene.decor.includes('car') && rng() < 0.55) {
       const p = this.propPool.acquire();
       p.kind = 'car';
       const side = rng() < 0.5 ? -1 : 1;
@@ -162,9 +172,8 @@ export class LevelGenerator {
 
     // §8 — obstáculos na trajetória do craque, dosados pela dificuldade.
     if (obstacleRate > 0 && rng() < obstacleRate) {
-      const kinds: PropKind[] = ['pedestrian', 'cone', 'bin', 'bike', 'scooter', 'pothole'];
       const p = this.propPool.acquire();
-      p.kind = pick(rng, kinds);
+      p.kind = pick(rng, this.scene.obstacles);
       // Nunca no centro exato logo à frente: sempre há rota de fuga.
       p.x = randRange(rng, -2.6, 2.6);
       p.z = z + randRange(rng, 2, CONFIG.world.segmentLength - 2);

@@ -12,6 +12,8 @@ npm install
 npm run dev        # http://localhost:5180
 npm run build      # bundle de produção
 npm run playtest   # bot automatizado valida os 17 critérios de aceite do MVP
+npm run metatest   # valida Fases 3 e 4 (conteúdo, economia, desafios, rede)
+npm test           # os dois
 ```
 
 Abra no celular pela rede local (`npm run dev` já expõe o host) — o jogo foi
@@ -52,9 +54,36 @@ restart. Inclui checagem de determinismo da física e de frame time sem picos.
 
 Requer o dev server rodando (`npm run dev`) em `localhost:5180`.
 
-## Estado do MVP
+## Conteúdo (Fase 3)
 
-Fases 1 e 2 do escopo entregues (core gameplay, menu, seleção de personagem,
-recorde local, tutorial, progressão de dificuldade, obstáculos). Fases 3 e 4
-(conteúdo extra, ranking online, contas, economia) estão apenas **preparadas na
-arquitetura** — ver `ARCHITECTURE.md`.
+- **12 craques** originais — 3 liberados, 9 desbloqueáveis com moedas.
+- **5 bolas**, cada uma com física própria (tamanho, altura do quique, caos e
+  bônus de pontuação). Não é skin: a bola muda como se joga.
+- **3 cenários** procedurais: rua urbana, orla e quadra da vila.
+- **Desafios diários**: três por dia (um fácil, um médio, um difícil), sorteados
+  deterministicamente pela data — todo mundo pega os mesmos.
+- **Personalização**: craque + bola + cenário numa tela só.
+
+## Meta-jogo (Fase 4)
+
+Implementado no cliente, atrás de interfaces:
+
+| Recurso | Estado |
+|---|---|
+| Economia (moedas, desbloqueios) | Funcionando, local |
+| Ranking | Funcionando local; online quando o backend existir |
+| Eventos com janela de tempo | Funcionando (calendário local; servidor pode sobrepor) |
+| Duelo assíncrono por código | Funcionando local |
+| Loja / monetização | Fluxo completo com `MockPurchaseProvider` — **nenhuma cobrança real** |
+| Conta de usuário / cloud save | **Não implementado**: depende de provedor de auth |
+| Multiplayer em tempo real | **Não implementado** |
+
+Ligar o backend é definir `VITE_API_URL` no build: o jogo passa a usar
+`HttpGameApi` no lugar de `LocalGameApi`, sem tocar em gameplay. O contrato REST
+está em [`docs/api-contract.md`](docs/api-contract.md).
+
+## Estado do projeto
+
+Fases 1, 2 e 3 completas. Fase 4 entregue no cliente (economia, ranking,
+eventos, duelo, loja, fila de sincronização offline) — o servidor em si não
+existe ainda; ver a tabela acima e o contrato documentado.
