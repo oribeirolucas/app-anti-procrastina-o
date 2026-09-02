@@ -496,9 +496,12 @@ export class Renderer {
     const r = Math.max(4, ball.radius * p.scale);
     const t = clamp(-err / 0.45, 0, 1); // 1 = longe, 0 = agora
     const ringR = r * (1.5 + t * 3.4);
-    const inWindow = Math.abs(err) <= CONFIG.timing.good;
+    // O anel mostra a janela EM VIGOR (com assist e atributo do craque), não a
+    // constante — senão ele mentiria justamente nos primeiros toques.
+    const w = ball.windows;
+    const inWindow = Math.abs(err) <= w.good;
     ctx.strokeStyle = inWindow
-      ? (Math.abs(err) <= CONFIG.timing.perfect ? '#7dfcb0' : '#ffe066')
+      ? (Math.abs(err) <= w.perfect ? '#7dfcb0' : '#ffe066')
       : 'rgba(255,255,255,0.5)';
     ctx.lineWidth = Math.max(2, r * (inWindow ? 0.28 : 0.16));
     ctx.beginPath(); ctx.arc(p.sx, p.sy, ringR, 0, Math.PI * 2); ctx.stroke();

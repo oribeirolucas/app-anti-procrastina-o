@@ -27,12 +27,23 @@ export const CONFIG = {
     footOffset: 0.5,
     /** Impulso vertical de um toque normal (apex ~1.05m). */
     baseImpulse: 6.5,
+    /**
+     * Saque inicial: mais alto que um toque normal, de propósito. O primeiro
+     * contato é o momento em que o jogador está lendo a tela pela primeira
+     * vez — ele precisa de tempo para ver o anel fechar, não de reflexo.
+     */
+    serveImpulse: 8.6,
+    serveHeight: 1.6,
     /** Multiplicador de impulso do swipe up. */
     swipeUpImpulse: 1.32,
     /** Alcance horizontal do pé. Além disso o toque é MISS por distância. */
     reachX: 1.05,
-    /** Janela vertical em que o pé alcança a bola. */
-    reachYMax: 0.95,
+    /**
+     * Janela vertical em que o pé alcança a bola. Subiu de 0.95 para 1.05
+     * apenas para perdoar o toque adiantado — afrouxar mais tiraria o desafio
+     * que o playtest aprovou.
+     */
+    reachYMax: 1.05,
     /** Correção lateral aplicada por um swipe (m/s). */
     swipeCorrection: 1.6,
     /** Instabilidade lateral injetada por um toque BAD (m/s). */
@@ -43,10 +54,27 @@ export const CONFIG = {
   },
 
   timing: {
-    /** Janelas em segundos, medidas contra o instante ideal de contato. */
-    perfect: 0.055,
-    good: 0.13,
+    /**
+     * Janelas em segundos, medidas contra o instante ideal de contato.
+     *
+     * DECISÃO DE CALIBRAÇÃO (playtest humano): estas janelas ficam apertadas
+     * de propósito — o desafio é o produto. O que o playtest mostrou não foi
+     * dificuldade demais, e sim 8 de 16 tentativas mortas ANTES do primeiro
+     * toque: barreira de entrada, não desafio. A correção é toda no `assist`
+     * abaixo e no saque inicial, nunca em afrouxar o jogo em regime.
+     */
+    perfect: 0.06,
+    good: 0.145,
     /** Fora de `good` mas com a bola alcançável = BAD. */
+
+    /**
+     * Assist decrescente: só os PRIMEIROS toques têm janela ampliada, e ela
+     * fecha rápido. É a rampa de entrada — aos 5 toques o jogador já está no
+     * jogo cheio. "Fácil de aprender, difícil de dominar" é exatamente isto:
+     * a curva mora aqui, não nas janelas em regime.
+     */
+    assistTouches: 5,
+    assistStart: 1.9,
   },
 
   player: {

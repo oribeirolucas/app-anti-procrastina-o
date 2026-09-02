@@ -71,6 +71,25 @@ export class BallController {
   get apex(): number { return apexHeight(this.state); }
   get instabilityLevel(): number { return this.instability; }
 
+  /**
+   * Assist decrescente dos primeiros toques (§ config.timing.assist*).
+   * Começa em 2.2x e converge para 1.0 — o jogador aprende o ritmo sem morrer
+   * no primeiro contato, e a partir daí joga o jogo real. O HUD usa o mesmo
+   * fator, então o anel verde sempre corresponde à janela em vigor.
+   */
+  assistFactor(): number {
+    const { assistTouches, assistStart } = CONFIG.timing;
+    if (this.touchCount >= assistTouches) return 1;
+    const t = this.touchCount / assistTouches;
+    return assistStart + (1 - assistStart) * t;
+  }
+
+  /** Janelas em vigor agora, já com personagem e assist aplicados. */
+  get windows(): { perfect: number; good: number } {
+    const a = this.assistFactor() * this.character.attributes.controle;
+    return { perfect: CONFIG.timing.perfect * a, good: CONFIG.timing.good * a };
+  }
+
   /** Erro de timing atual, em segundos (negativo = cedo). Usado pelo HUD. */
   timingErrorNow(): number {
     return -timeToDescendingHeight(this.state, CONFIG.ball.contactHeight);
@@ -103,8 +122,9 @@ export class BallController {
 
     const timingError = this.timingErrorNow();
     const abs = Math.abs(timingError);
-    const perfectWindow = CONFIG.timing.perfect * attr.controle;
-    const goodWindow = CONFIG.timing.good * attr.controle;
+    const assist = this.assistFactor();
+    const perfectWindow = CONFIG.timing.perfect * attr.controle * assist;
+    const goodWindow = CONFIG.timing.good * attr.controle * assist;
 
     let quality: TouchQuality;
     if (abs <= perfectWindow) quality = 'PERFECT';

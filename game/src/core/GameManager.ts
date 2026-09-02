@@ -289,7 +289,7 @@ export class GameManager {
     this.audio.unlock();
     this.state = 'playing';
     this.runTime = 0;
-    this.graceTime = 0.9;
+    this.graceTime = 1.2;
 
     // Um evento pode forçar o cenário da temporada.
     const forced = this.events.forcedSceneId;
@@ -305,8 +305,11 @@ export class GameManager {
     this.camera.reset();
     this.camera.z = -CONFIG.camera.distance;
 
-    // Saque inicial: a bola sobe sozinha e o primeiro toque é do jogador.
-    this.ballController.state.vy = CONFIG.ball.baseImpulse * this.ball.impulse * 0.92;
+    // Saque inicial: alto e lento de propósito. O primeiro contato é onde o
+    // jogador está lendo a tela pela primeira vez — playtest humano mostrou
+    // 40% das tentativas morrendo exatamente aqui, antes de qualquer toque.
+    this.ballController.state.y = CONFIG.ball.serveHeight;
+    this.ballController.state.vy = CONFIG.ball.serveImpulse * this.ball.impulse;
 
     this.ui.resetHudCache();
     this.ui.setEvent(this.events.active);
@@ -443,10 +446,12 @@ export class GameManager {
       }
 
       if (this.ballController.hasFallen()) {
-        if (this.graceTime > 0) {
-          // Rede de segurança apenas no saque inicial.
+        // A rede de segurança vale enquanto o jogador ainda não encostou na
+        // bola nenhuma vez: ninguém deve perder antes de jogar.
+        if (this.graceTime > 0 || this.ballController.totalTouches === 0) {
           this.ballController.state.y = this.ballController.radius + 0.02;
-          this.ballController.state.vy = CONFIG.ball.baseImpulse * 0.8;
+          this.ballController.state.vy = CONFIG.ball.serveImpulse * 0.82;
+          this.ui.showToast('TOQUE QUANDO O ANEL FECHAR');
         } else {
           this.endRun();
           return;
