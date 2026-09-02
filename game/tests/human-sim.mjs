@@ -8,9 +8,11 @@
  *   0.05 = jogador experiente · 0.09 = jogador mediano · 0.14 = primeira vez
  */
 import { chromium } from 'playwright';
+import { appendFileSync } from 'node:fs';
 
 const URL = process.argv[2] ?? 'http://localhost:5180/';
 const RUNS = Number(process.argv[3] ?? 20);
+const OUT = process.argv[4] ?? '/tmp/human-sim.jsonl';
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const page = await browser.newPage({ viewport: { width: 412, height: 892 }, hasTouch: true });
 await page.goto(URL, { waitUntil: 'networkidle' });
@@ -84,7 +86,11 @@ for (const p of profiles) {
   const deaths6 = results.filter((r) => r.distance < 8).length;
   const zeroTouch = results.filter((r) => r.touches === 0).length;
   const reached100 = results.filter((r) => r.distance >= 100).length;
-  report.push({ perfil: p.name, mediana: med, melhor: best, 'mortes<8m': `${deaths6}/${RUNS}`, 'sem 1 toque': `${zeroTouch}/${RUNS}`, '>=100m': `${reached100}/${RUNS}` });
+  const row = { perfil: p.name.trim(), mediana: Math.round(med), melhor: Math.round(best), mortesAte8m: `${deaths6}/${RUNS}`, semUmToque: `${zeroTouch}/${RUNS}`, ate100m: `${reached100}/${RUNS}` };
+  report.push(row);
+  // Grava por perfil: um travamento no meio não pode custar a medição inteira.
+  appendFileSync(OUT, JSON.stringify(row) + '\n');
+  console.log('OK ' + JSON.stringify(row));
 }
 await browser.close();
-console.table(report.map((r) => ({ ...r, mediana: `${r.mediana.toFixed(0)}m`, melhor: `${r.melhor.toFixed(0)}m` })));
+console.table(report);
