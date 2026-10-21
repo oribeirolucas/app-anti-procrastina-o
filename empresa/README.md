@@ -64,7 +64,8 @@ Ver [OPERACAO.md](OPERACAO.md) (setores, fluxos, rotinas, KPIs) e [agentes/](age
 
 - Aprovar orçamento de mídia e qualquer gasto > R$ 500.
 - Fazer as demos/fechamentos nas primeiras 4 semanas (o agente Closer prepara tudo; depois ele assume o roteiro por WhatsApp + você só nos contas grandes).
-- Fase de validação no **CPF**: gateway (Asaas/Kiwify aceitam CPF), Meta Business como pessoa física, e o WhatsApp de cada clínica conectado na conta Meta da própria clínica. Abrir CNPJ quando bater o primeiro gatilho: ~R$6k/mês recorrente, 15 clientes, ou cliente exigindo nota fiscal.
+- **Início no CPF (PF):** cobrança via Asaas com recibo + contrato simples; Meta Business pessoal; WhatsApp de cada clínica na conta Meta da própria clínica. Nota avulsa (NFS-e PMF) ou RPA só como exceção para quem exigir.
+- **Regra do CNPJ (PJ):** abrir no fim do mês 2 **ou** ao atingir 10–15 clientes, o que vier primeiro (antes disso se vários clientes exigirem nota). Levar ao contador: CNAE 6203-1/00 vs 6209-1/00, Anexo III vs V e fator R.
 
 ## 7. Pontos em aberto para debate
 
