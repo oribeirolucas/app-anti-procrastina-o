@@ -22,7 +22,7 @@ prem=[
 ("Taxa do gateway Asaas (% da receita)",0.035,"Média Pix/boleto/cartão"),
 ("Provisão IR no CPF (% do lucro)",0.275,"Carnê-leão, alíquota máxima; vira Simples com CNPJ"),
 ("Custo de voz por minuto (US$)",0.12,"ElevenLabs Agents + telefonia"),
-("Minutos por ligação",3,""),
+("Minutos médios por ligação",1.5,"Mistura de não atendidas (~0,5 min) e conversas (3–5 min)"),
 ]
 for i,(a,b,c) in enumerate(prem,2):
     p.cell(i,1,a);x=p.cell(i,2,b);x.fill=IN;p.cell(i,3,c)
@@ -39,12 +39,13 @@ hdr(c,1,["Categoria","Item","Unid."]+meses+["Total 6 meses","Observação"])
 fixos=[
 ("Ferramentas","n8n (plano Starter)","R$",[150]*6,"Já existe; ajuste ao seu plano real"),
 ("Ferramentas","Claude para os agentes internos","US$",[40,50,60,70,80,90],"Via créditos do n8n ou API; cresce com o volume"),
-("Ferramentas","ElevenLabs (voz, plano Creator → Pro)","US$",[22,22,99,99,99,99],"Pro no mês 3 para mais minutos/vozes"),
+("Ferramentas","ElevenLabs (voz, plano Creator → Pro)","US$",[99,99,330,330,330,330],"Pro desde o mês 1; Scale no mês 3 para o volume de ligações"),
 ("Ferramentas","Domínio + landing (Vercel grátis)","R$",[40,0,0,0,0,0],"Domínio anual"),
 ("Telefonia","Chip WhatsApp da empresa","R$",[20]*6,""),
-("Telefonia","Número BR para ligações (Twilio/SIP)","R$",[0,50,50,50,50,50],"A partir da Fase 2"),
-("Telefonia","Ligações de venda (nº de ligações)","lig.",[0,100,300,500,600,600],"Edite o volume; custo calculado abaixo"),
-("Mídia","Meta Ads","R$",[1500,2500,4000,6000,8000,9000],"Principal alavanca; só sobe com CAC na meta"),
+("Telefonia","Número BR com prefixo 0303 (telemarketing ativo)","R$",[60]*6,"Exigência Anatel para ligação ativa de oferta"),
+("Prospecção","Google Places API (busca de clínicas)","R$",[60,60,80,100,100,100],"Lista por cidade com nota e nº de avaliações"),
+("Telefonia","Ligações de venda (nº de ligações)","lig.",[600,1000,1500,2000,2000,2000],"~57 ligações por venda (25% atende decisor × 20% avança × 35% fecha)"),
+("Mídia","Meta Ads","R$",[0]*6,"Sem anúncios: aquisição 100% por prospecção ativa"),
 ("Administrativo","Contador (após CNPJ)","R$",[0,0,300,300,300,300],"CNPJ previsto no fim do mês 2"),
 ("Administrativo","Abertura do CNPJ (único)","R$",[0,0,400,0,0,0],"Estimativa"),
 ("Reserva","Imprevistos (10% dos custos fixos acima)","R$",None,"Calculado"),
@@ -106,7 +107,7 @@ f=wb.create_sheet("Resultado e caixa")
 hdr(f,1,["Linha"]+meses+["Total"])
 CM="'Custos mensais'!"
 lines=[
-("Clientes ativos (fim do mês)",[8,22,40,62,90,107],"in"),
+("Clientes ativos (fim do mês)",[5,15,32,55,82,107],"in"),
 ("Clientes novos",None,"novos"),
 ("Receita recorrente (MRR)",None,"mrr"),
 ("Receita de setup",None,"setup"),
@@ -120,7 +121,7 @@ lines=[
 ("RESULTADO LÍQUIDO",None,"liq"),
 ("CAIXA ACUMULADO",None,"cx"),
 ("INVESTIMENTO NECESSÁRIO NO MÊS (aporte)",None,"aporte"),
-("CAC (mídia + ligações ÷ clientes novos)",None,"cac"),
+("CAC (ligações ÷ clientes novos)",None,"cac"),
 ]
 idx={}
 for i,(lab,_,k) in enumerate(lines,2): idx[k]=i;f.cell(i,1,lab)

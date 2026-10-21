@@ -19,7 +19,8 @@
 | 01 | Inteligência de Mercado | Crescimento | Insights acionados/semana | Semanal |
 | 02 | Produto — Recepcionista IA | Entrega | Taxa de agendamento das conversas | Contínuo (é o produto) |
 | 03 | Conteúdo Orgânico | Marketing | Leads orgânicos/mês | Diário |
-| 04 | Tráfego Pago | Marketing | CPL ≤ R$ 15, CAC ≤ R$ 900 | Diário |
+| 04 | Tráfego Pago (desligado) | Marketing | — | — |
+| 12 | Vendedor de Voz | Vendas | Venda a cada ~57 ligações | Contínuo |
 | 05 | SDR / Prospecção | Vendas | Demos agendadas/semana | Diário |
 | 06 | Closer | Vendas | Taxa de fechamento ≥ 35% | Por demo |
 | 07 | Onboarding | Entrega | Go-live ≤ 72h | Por cliente |

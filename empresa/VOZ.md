@@ -41,3 +41,7 @@ Sempre com você: abrir CNPJ, contratos, saques e qualquer gasto fora dessas reg
 - **Persona:** teste A/B. Voz A feminina consultiva ("Júlia") × voz B masculina consultiva ("Rafael"), 50/50 por lead. Vence a de maior taxa ligação atendida → demo/venda, depois de pelo menos 60 ligações atendidas por voz.
 - **Plataforma:** ElevenLabs Agents (melhor voz pt-BR), com Claude como cérebro quando a plataforma permitir; n8n via webhooks.
 - **Teste:** o fundador é o primeiro lead (ligação + áudios + recepcionista) antes de qualquer cliente real.
+
+## Mudança: aquisição 100% outbound por ligação
+- Sem Meta Ads. Fluxo: 05 busca clínicas no Google (Places API) → enriquece → 12 liga → demo/link de pagamento.
+- **Compliance obrigatório:** número com prefixo **0303** (Anatel, telemarketing ativo), horário comercial, opt-out imediato, IA se identifica nos primeiros 10 segundos, base legal LGPD = legítimo interesse B2B com dados públicos da empresa.
