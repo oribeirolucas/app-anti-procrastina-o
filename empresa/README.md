@@ -64,7 +64,7 @@ Ver [OPERACAO.md](OPERACAO.md) (setores, fluxos, rotinas, KPIs) e [agentes/](age
 
 - Aprovar orçamento de mídia e qualquer gasto > R$ 500.
 - Fazer as demos/fechamentos nas primeiras 4 semanas (o agente Closer prepara tudo; depois ele assume o roteiro por WhatsApp + você só nos contas grandes).
-- Ser o CNPJ, a conta Meta Business, a conta WhatsApp Cloud API e o gateway (Asaas/Stripe/Kiwify).
+- Fase de validação no **CPF**: gateway (Asaas/Kiwify aceitam CPF), Meta Business como pessoa física, e o WhatsApp de cada clínica conectado na conta Meta da própria clínica. Abrir CNPJ quando bater o primeiro gatilho: ~R$6k/mês recorrente, 15 clientes, ou cliente exigindo nota fiscal.
 
 ## 7. Pontos em aberto para debate
 
