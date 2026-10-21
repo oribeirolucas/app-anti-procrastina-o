@@ -24,7 +24,7 @@
 | Plano | Mensal | Inclui |
 |---|---|---|
 | Essencial | R$ 297 | Atendimento 24/7, FAQ, captura de lead, transbordo humano |
-| Pro (âncora de venda) | R$ 497 | + agendamento integrado (Google Agenda), confirmação anti no-show, reativação mensal |
+| Pro (âncora de venda) | R$ 597 | + agendamento integrado (Google Agenda), confirmação anti no-show, reativação mensal |
 | Rede (2+ unidades) | R$ 897 | + multiunidade, relatório semanal, gerente de conta |
 | Setup (todos) | R$ 497 único | Implantação em 72h; isento no plano anual |
 
@@ -67,9 +67,10 @@ Ver [OPERACAO.md](OPERACAO.md) (setores, fluxos, rotinas, KPIs) e [agentes/](age
 - **Início no CPF (PF):** cobrança via Asaas com recibo + contrato simples; Meta Business pessoal; WhatsApp de cada clínica na conta Meta da própria clínica. Nota avulsa (NFS-e PMF) ou RPA só como exceção para quem exigir.
 - **Regra do CNPJ (PJ):** abrir no fim do mês 2 **ou** ao atingir 10–15 clientes, o que vier primeiro (antes disso se vários clientes exigirem nota). Levar ao contador: CNAE 6203-1/00 vs 6209-1/00, Anexo III vs V e fator R.
 
-## 7. Pontos em aberto para debate
+## 7. Decisões aprovadas (21/10/2026)
 
-1. **Nicho de entrada:** estética (ticket alto, decisão rápida) vs. odontologia (mais clínicas). Recomendo estética.
-2. **Preço:** R$ 397 médio é agressivo-baixo para o valor; podemos testar R$ 597 no Pro desde o início.
-3. **Build vs. white-label:** construir a recepcionista em n8n + Claude (margem maior) vs. revender plataforma pronta (lançamento mais rápido). Recomendo construir — o prompt do produto já está em `agentes/02-produto-recepcionista.md`.
-4. **Modelo de IA por agente:** todos configurados no Claude Opus 5.5. Para o atendimento de alto volume dá para baixar custo com modelos menores — decisão sua após medir qualidade.
+1. **Nicho de entrada:** clínicas de estética.
+2. **Preço:** Pro a R$ 597 (teste). Com o mix esperado, o ticket médio sobe para ~R$ 470 e a meta cai para **~107 clientes**.
+3. **Construir** a recepcionista em n8n + WhatsApp Cloud API + Claude (sem white-label).
+4. **Fiscal:** começa no CPF; CNPJ no fim do mês 2 ou com 10–15 clientes.
+5. **Modelo de IA:** Claude Opus 5.5 em todos os agentes até medirmos custo e qualidade.
