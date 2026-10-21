@@ -36,3 +36,8 @@ Lead (anúncio, formulário, WhatsApp, lista B2B)
 | 3 | Realocar verba de anúncio entre campanhas (sem aumentar o total) | 30 dias com CAC dentro da meta |
 | 4 | Aumentar orçamento até +20%/semana se ROAS ≥ meta | 60 dias de caixa positivo |
 Sempre com você: abrir CNPJ, contratos, saques e qualquer gasto fora dessas regras.
+
+## Decisões aprovadas
+- **Persona:** teste A/B. Voz A feminina consultiva ("Júlia") × voz B masculina consultiva ("Rafael"), 50/50 por lead. Vence a de maior taxa ligação atendida → demo/venda, depois de pelo menos 60 ligações atendidas por voz.
+- **Plataforma:** ElevenLabs Agents (melhor voz pt-BR), com Claude como cérebro quando a plataforma permitir; n8n via webhooks.
+- **Teste:** o fundador é o primeiro lead (ligação + áudios + recepcionista) antes de qualquer cliente real.
