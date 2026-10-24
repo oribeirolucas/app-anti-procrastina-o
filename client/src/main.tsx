@@ -5,6 +5,7 @@ import { QueryCache, MutationCache, QueryClient, QueryClientProvider } from "@ta
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { trpc } from "./lib/trpc";
 import App from "./App";
+import { ProvedorAvisos } from "./lib/aviso";
 import "./index.css";
 
 const naoAutenticado = (e: unknown) => e instanceof TRPCClientError && e.data?.code === "UNAUTHORIZED";
@@ -29,7 +30,9 @@ function Raiz() {
     <trpc.Provider client={cliente} queryClient={qc}>
       <QueryClientProvider client={qc}>
         <BrowserRouter>
-          <App />
+          <ProvedorAvisos>
+            <App />
+          </ProvedorAvisos>
         </BrowserRouter>
       </QueryClientProvider>
     </trpc.Provider>

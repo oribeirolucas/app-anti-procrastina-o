@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 type Variante = "primario" | "secundario" | "perigo" | "fantasma";
@@ -50,10 +51,19 @@ export function Selecao({ rotulo, children, ...p }: SelectHTMLAttributes<HTMLSel
 }
 
 export function Modal({ titulo, aberto, aoFechar, children, largura = "max-w-lg" }: { titulo: string; aberto: boolean; aoFechar: () => void; children: ReactNode; largura?: string }) {
+  const caixa = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!aberto) return;
+    // Foco no primeiro campo e fechamento com Esc
+    caixa.current?.querySelector<HTMLElement>("input, select, textarea, button:not([aria-label=Fechar])")?.focus();
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && aoFechar();
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [aberto, aoFechar]);
   if (!aberto) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-[10vh]" onMouseDown={(e) => e.target === e.currentTarget && aoFechar()}>
-      <div className={`w-full ${largura} rounded-lg bg-white shadow-xl`} role="dialog" aria-modal="true" aria-label={titulo}>
+      <div ref={caixa} className={`w-full ${largura} rounded-lg bg-white shadow-xl`} role="dialog" aria-modal="true" aria-label={titulo}>
         <div className="flex items-center justify-between border-b px-5 py-3">
           <h2 className="font-semibold text-slate-800">{titulo}</h2>
           <button onClick={aoFechar} className="text-xl leading-none text-slate-400 hover:text-slate-600" aria-label="Fechar">×</button>

@@ -8,7 +8,9 @@ Fonte única: `server/src/auth/permissoes.ts`. A tela Administração → Usuár
 | config:gerir | ✓ | | | fuso horário e configurações gerais |
 | auditoria:ver | ✓ | ✓ | | log de ações e menu Administração |
 | crm:ler / crm:escrever | ✓ | ✓ | ✓ | empresas, contatos, oportunidades, tarefas, interações |
-| crm:excluir | ✓ | ✓ | | excluir empresa/contato/oportunidade |
+| crm:arquivar | ✓ | ✓ | | arquivar/reativar empresa, contato, oportunidade (não há exclusão física) |
+| crm:reabrir | ✓ | ✓ | | reabrir ou mudar o resultado de oportunidade ganha/perdida |
+| dados:anonimizar | ✓ | | | anonimizar contato (LGPD, irreversível) |
 | crm:pipeline | ✓ | ✓ | | criar/editar/desativar etapas |
 | crm:importar / crm:exportar | ✓ | ✓ | | CSV |
 | contratos:escrever | ✓ | ✓ | | registrar e alterar contratos |

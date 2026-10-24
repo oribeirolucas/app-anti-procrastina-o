@@ -10,14 +10,18 @@ export default function Empresas() {
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const [nova, setNova] = useState(false);
-  const q = trpc.cadastros.empresas.useQuery({ busca: busca || undefined, pagina });
+  const [arquivados, setArquivados] = useState(false);
+  const q = trpc.cadastros.empresas.useQuery({ busca: busca || undefined, pagina, arquivados });
   const totalPaginas = q.data ? Math.max(1, Math.ceil(q.data.total / q.data.porPagina)) : 1;
   return (
     <Pagina titulo="Empresas" acoes={<><BotoesCsv entidade="empresas" /><Botao onClick={() => setNova(true)}>+ Empresa</Botao></>}>
-      <div className="w-72"><Campo rotulo="Buscar" placeholder="Nome, cidade ou CNPJ" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} /></div>
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="w-72"><Campo rotulo="Buscar" placeholder="Nome, cidade ou CNPJ" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} /></div>
+        <label className="flex items-center gap-2 pb-2 text-sm text-slate-600"><input type="checkbox" checked={arquivados} onChange={(e) => { setArquivados(e.target.checked); setPagina(1); }} /> Mostrar arquivadas</label>
+      </div>
       <Erro erro={q.error} tentar={() => q.refetch()} />
       {q.isLoading ? <Carregando /> : !q.data?.linhas.length ? (
-        <Vazio texto={busca ? "Nenhuma empresa encontrada." : "Nenhuma empresa cadastrada ainda."} acao={!busca && <Botao onClick={() => setNova(true)}>Cadastrar a primeira</Botao>} />
+        <Vazio texto={busca || arquivados ? "Nenhuma empresa encontrada." : "Nenhuma empresa cadastrada ainda."} acao={!busca && !arquivados && <Botao onClick={() => setNova(true)}>Cadastrar a primeira</Botao>} />
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white">
           <Tabela colunas={["Nome", "Segmento", "Cidade", "Telefone", "Responsável", "Oport. abertas"]}>

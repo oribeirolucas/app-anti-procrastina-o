@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "../lib/trpc";
+import { useAvisar } from "../lib/aviso";
 import { hojeISO } from "../lib/formato";
 import { Botao, Campo, Erro, Modal, Selecao } from "./ui";
 
@@ -7,12 +8,13 @@ type Contrato = { id: string; plano: string; valorMensal: string; valorSetup: st
 
 export function FormContrato({ aberto, aoFechar, empresaId, contrato, oportunidades }: { aberto: boolean; aoFechar: () => void; empresaId: string; contrato?: Contrato | null; oportunidades: { id: string; titulo: string }[] }) {
   const utils = trpc.useUtils();
+  const avisar = useAvisar();
   const inicial = () => ({
     plano: contrato?.plano ?? "Pro", valorMensal: contrato?.valorMensal.replace(".", ",") ?? "597,00", valorSetup: contrato?.valorSetup.replace(".", ",") ?? "0",
     inicio: contrato?.inicio ?? hojeISO(), fim: contrato?.fim ?? "", diaVencimento: String(contrato?.diaVencimento ?? 10), situacao: contrato?.situacao ?? "ativo", oportunidadeId: contrato?.oportunidadeId ?? "",
   });
   const [f, setF] = useState(inicial);
-  const salvar = trpc.pipeline.salvarContrato.useMutation({ onSuccess: () => { utils.cadastros.empresa.invalidate(); utils.pipeline.contratos.invalidate(); utils.relatorios.invalidate(); aoFechar(); } });
+  const salvar = trpc.pipeline.salvarContrato.useMutation({ onSuccess: () => { avisar("Contrato salvo."); utils.cadastros.empresa.invalidate(); utils.pipeline.contratos.invalidate(); utils.relatorios.invalidate(); aoFechar(); } });
   const set = (k: keyof ReturnType<typeof inicial>) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
     <Modal titulo={contrato ? "Editar contrato" : "Novo contrato"} aberto={aberto} aoFechar={aoFechar}>

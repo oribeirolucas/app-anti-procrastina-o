@@ -5,25 +5,31 @@ import { moeda } from "../lib/formato";
 import { somarBRL } from "../lib/somar";
 import { Botao, Campo, Carregando, Erro, Modal, Pagina, Selecao } from "../components/ui";
 import { FormOportunidade } from "../components/formularios";
+import { useAvisar } from "../lib/aviso";
 
 export default function Pipeline() {
   const utils = trpc.useUtils();
+  const avisar = useAvisar();
   const [busca, setBusca] = useState("");
   const [responsavelId, setResponsavelId] = useState("");
   const [nova, setNova] = useState(false);
-  const [perda, setPerda] = useState<{ id: string; etapaId: string } | null>(null);
+  const [perda, setPerda] = useState<{ id: string; etapaId: string; versao: number } | null>(null);
   const [motivo, setMotivo] = useState("");
   const etapas = trpc.pipeline.etapas.useQuery();
   const responsaveis = trpc.admin.responsaveis.useQuery();
   const ops = trpc.pipeline.oportunidades.useQuery({ busca: busca || undefined, responsavelId: responsavelId || undefined });
   const mover = trpc.pipeline.moverEtapa.useMutation({
-    onSuccess: () => { utils.pipeline.oportunidades.invalidate(); utils.relatorios.invalidate(); setPerda(null); setMotivo(""); },
+    onSuccess: () => { utils.pipeline.oportunidades.invalidate(); utils.relatorios.invalidate(); setPerda(null); setMotivo(""); avisar("Etapa atualizada."); },
+    // Em conflito ou recusa, recarrega o quadro para refletir o estado real
+    onError: (e) => { avisar(e.message, "erro"); utils.pipeline.oportunidades.invalidate(); },
   });
 
   const soltar = (opId: string, etapaId: string) => {
+    const op = ops.data?.find((o) => o.id === opId);
+    if (!op || op.etapaId === etapaId || mover.isPending) return;
     const etapa = etapas.data?.find((e) => e.id === etapaId);
-    if (etapa?.tipo === "perdida") setPerda({ id: opId, etapaId });
-    else mover.mutate({ id: opId, etapaId });
+    if (etapa?.tipo === "perdida") setPerda({ id: opId, etapaId, versao: op.versao });
+    else mover.mutate({ id: opId, etapaId, versao: op.versao });
   };
 
   return (
@@ -34,7 +40,7 @@ export default function Pipeline() {
           <option value="">Todos</option>{responsaveis.data?.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
         </Selecao></div>
       </div>
-      <Erro erro={ops.error ?? etapas.error ?? mover.error} />
+      <Erro erro={ops.error ?? etapas.error} />
       {ops.isLoading || etapas.isLoading ? <Carregando /> : (
         <div className="flex gap-3 overflow-x-auto pb-4">
           {etapas.data?.map((etapa) => {

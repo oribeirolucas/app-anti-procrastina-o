@@ -4,22 +4,34 @@ import { trpc } from "../lib/trpc";
 import { Botao, Campo, Carregando, Erro, Pagina, Tabela, Vazio } from "../components/ui";
 import { FormContato } from "../components/formularios";
 import { BotoesCsv } from "../components/Csv";
+import { useAvisar } from "../lib/aviso";
+import { usePode } from "../lib/sessao";
 
 export default function Contatos() {
   const utils = trpc.useUtils();
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const [novo, setNovo] = useState(false);
-  const q = trpc.cadastros.contatos.useQuery({ busca: busca || undefined, pagina });
-  const optout = trpc.cadastros.atualizarContato.useMutation({ onSuccess: () => utils.cadastros.contatos.invalidate() });
+  const [arquivados, setArquivados] = useState(false);
+  const avisar = useAvisar();
+  const podeAnonimizar = usePode("dados:anonimizar");
+  const podeArquivar = usePode("crm:arquivar");
+  const q = trpc.cadastros.contatos.useQuery({ busca: busca || undefined, pagina, arquivados });
+  const aoMudar = (msg: string) => ({ onSuccess: () => { utils.cadastros.contatos.invalidate(); avisar(msg); }, onError: (e: { message: string }) => avisar(e.message, "erro") });
+  const optout = trpc.cadastros.definirDescadastro.useMutation(aoMudar("Preferência de contato atualizada."));
+  const arquivar = trpc.cadastros.arquivarContato.useMutation(aoMudar("Contato atualizado."));
+  const anonimizar = trpc.cadastros.anonimizarContato.useMutation(aoMudar("Dados pessoais removidos."));
   const totalPaginas = q.data ? Math.max(1, Math.ceil(q.data.total / q.data.porPagina)) : 1;
   return (
     <Pagina titulo="Contatos" acoes={<><BotoesCsv entidade="contatos" /><Botao onClick={() => setNovo(true)}>+ Contato</Botao></>}>
-      <div className="w-72"><Campo rotulo="Buscar" placeholder="Nome, e-mail ou telefone" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} /></div>
-      <Erro erro={q.error ?? optout.error} />
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="w-72"><Campo rotulo="Buscar" placeholder="Nome, e-mail ou telefone" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} /></div>
+        <label className="flex items-center gap-2 pb-2 text-sm text-slate-600"><input type="checkbox" checked={arquivados} onChange={(e) => { setArquivados(e.target.checked); setPagina(1); }} /> Mostrar arquivados</label>
+      </div>
+      <Erro erro={q.error} />
       {q.isLoading ? <Carregando /> : !q.data?.linhas.length ? <Vazio texto="Nenhum contato encontrado." /> : (
         <div className="rounded-lg border border-slate-200 bg-white">
-          <Tabela colunas={["Nome", "Empresa", "E-mail", "Telefone", "Cargo", "Follow-up"]}>
+          <Tabela colunas={["Nome", "Empresa", "E-mail", "Telefone", "Cargo", "Follow-up", ""]}>
             {q.data.linhas.map((c) => (
               <tr key={c.id}>
                 <td className="px-3 py-2 font-medium">{c.nome}</td>
@@ -28,9 +40,17 @@ export default function Contatos() {
                 <td className="px-3 py-2">{c.telefone ?? "—"}</td>
                 <td className="px-3 py-2">{c.cargo ?? "—"}</td>
                 <td className="px-3 py-2">
-                  <button className={`text-xs underline ${c.descadastrado ? "text-red-600" : "text-slate-500"}`} onClick={() => optout.mutate({ id: c.id, descadastrado: !c.descadastrado })}>
-                    {c.descadastrado ? "Descadastrado (reativar)" : "Ativo (descadastrar)"}
-                  </button>
+                  {c.anonimizadoEm ? <span className="text-xs text-slate-400">anonimizado</span> : (
+                    <button disabled={optout.isPending} className={`text-xs underline ${c.descadastrado ? "text-red-600" : "text-slate-500"}`} onClick={() => optout.mutate({ id: c.id, descadastrado: !c.descadastrado })}>
+                      {c.descadastrado ? "Descadastrado (reativar)" : "Ativo (descadastrar)"}
+                    </button>
+                  )}
+                </td>
+                <td className="space-x-3 whitespace-nowrap px-3 py-2 text-xs">
+                  {podeArquivar && !c.anonimizadoEm && <button className="underline" onClick={() => arquivar.mutate({ id: c.id, arquivar: !arquivados })}>{arquivados ? "Reativar" : "Arquivar"}</button>}
+                  {podeAnonimizar && !c.anonimizadoEm && (
+                    <button className="text-red-600 underline" onClick={() => prompt(`Anonimizar remove nome, e-mail, telefone e textos de ${c.nome} de forma IRREVERSÍVEL. Digite ANONIMIZAR para confirmar:`) === "ANONIMIZAR" && anonimizar.mutate({ id: c.id })}>Anonimizar (LGPD)</button>
+                  )}
                 </td>
               </tr>
             ))}

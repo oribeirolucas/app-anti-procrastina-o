@@ -48,3 +48,11 @@ client/src/
 - Consultas via Drizzle (parametrizadas), entradas validadas com Zod, erros internos sem detalhes ao cliente.
 - CSV exportado neutraliza fórmulas (`=`, `+`, `-`, `@`).
 - Ações administrativas registradas em `auditoria`.
+
+## Integridade de dados
+
+- Unicidade no banco: nome de empresa (sem diferenciar maiúsculas), CNPJ e e-mail de contato.
+- Concorrência otimista (`versao`) em empresa, contato e oportunidade.
+- Arquivamento em vez de exclusão. Anonimização de contato para pedidos LGPD.
+- Registro + histórico + evento gravados na mesma transação.
+- Detalhes e regras em `CLAUDE.md` e `docs/requirements.md`.

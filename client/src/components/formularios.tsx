@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { trpc } from "../lib/trpc";
+import { useAvisar } from "../lib/aviso";
 import { AreaTexto, Botao, Campo, Erro, Modal, Selecao } from "./ui";
 
 const erroCampo = (e: { data?: { zod?: { fieldErrors?: Record<string, string[] | undefined> } | null } | null } | null, campo: string) =>
@@ -7,9 +8,10 @@ const erroCampo = (e: { data?: { zod?: { fieldErrors?: Record<string, string[] |
 
 export function FormEmpresa({ aberto, aoFechar, aoSalvar }: { aberto: boolean; aoFechar: () => void; aoSalvar?: (id: string) => void }) {
   const utils = trpc.useUtils();
+  const avisar = useAvisar();
   const [f, setF] = useState({ nome: "", documento: "", segmento: "", cidade: "", uf: "", telefone: "", site: "" });
   const criar = trpc.cadastros.criarEmpresa.useMutation({
-    onSuccess: (e) => { utils.cadastros.empresas.invalidate(); aoFechar(); setF({ nome: "", documento: "", segmento: "", cidade: "", uf: "", telefone: "", site: "" }); aoSalvar?.(e.id); },
+    onSuccess: (e) => { avisar("Empresa cadastrada."); utils.cadastros.empresas.invalidate(); aoFechar(); setF({ nome: "", documento: "", segmento: "", cidade: "", uf: "", telefone: "", site: "" }); aoSalvar?.(e.id); },
   });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
@@ -36,10 +38,11 @@ export function FormEmpresa({ aberto, aoFechar, aoSalvar }: { aberto: boolean; a
 
 export function FormContato({ aberto, aoFechar, empresaId }: { aberto: boolean; aoFechar: () => void; empresaId?: string }) {
   const utils = trpc.useUtils();
+  const avisar = useAvisar();
   const vazio = { nome: "", email: "", telefone: "", cargo: "" };
   const [f, setF] = useState(vazio);
   const criar = trpc.cadastros.criarContato.useMutation({
-    onSuccess: () => { utils.cadastros.invalidate(); aoFechar(); setF(vazio); },
+    onSuccess: () => { avisar("Contato cadastrado."); utils.cadastros.invalidate(); aoFechar(); setF(vazio); },
   });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
@@ -60,6 +63,7 @@ export function FormContato({ aberto, aoFechar, empresaId }: { aberto: boolean; 
 
 export function FormOportunidade({ aberto, aoFechar, empresaId }: { aberto: boolean; aoFechar: () => void; empresaId?: string }) {
   const utils = trpc.useUtils();
+  const avisar = useAvisar();
   const etapas = trpc.pipeline.etapas.useQuery();
   const responsaveis = trpc.admin.responsaveis.useQuery();
   const empresas = trpc.cadastros.empresas.useQuery({}, { enabled: aberto && !empresaId });
@@ -68,7 +72,7 @@ export function FormOportunidade({ aberto, aoFechar, empresaId }: { aberto: bool
   const contatos = trpc.cadastros.contatos.useQuery({ empresaId: f.empresaId || undefined }, { enabled: aberto && !!f.empresaId });
   const [contatoId, setContatoId] = useState("");
   const criar = trpc.pipeline.criarOportunidade.useMutation({
-    onSuccess: () => { utils.pipeline.invalidate(); utils.cadastros.invalidate(); utils.relatorios.invalidate(); aoFechar(); setF(vazio); },
+    onSuccess: () => { avisar("Oportunidade criada."); utils.pipeline.invalidate(); utils.cadastros.invalidate(); utils.relatorios.invalidate(); aoFechar(); setF(vazio); },
   });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
@@ -114,10 +118,11 @@ export function FormOportunidade({ aberto, aoFechar, empresaId }: { aberto: bool
 
 export function FormTarefa({ aberto, aoFechar, vinculo }: { aberto: boolean; aoFechar: () => void; vinculo: { empresaId?: string | null; oportunidadeId?: string | null; contatoId?: string | null } }) {
   const utils = trpc.useUtils();
+  const avisar = useAvisar();
   const responsaveis = trpc.admin.responsaveis.useQuery(undefined, { enabled: aberto });
   const vazio = { titulo: "", descricao: "", venceEm: "", responsavelId: "" };
   const [f, setF] = useState(vazio);
-  const criar = trpc.pipeline.criarTarefa.useMutation({ onSuccess: () => { utils.pipeline.invalidate(); utils.cadastros.empresa.invalidate(); aoFechar(); setF(vazio); } });
+  const criar = trpc.pipeline.criarTarefa.useMutation({ onSuccess: () => { avisar("Tarefa criada."); utils.pipeline.invalidate(); utils.cadastros.empresa.invalidate(); aoFechar(); setF(vazio); } });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
     <Modal titulo="Nova tarefa / lembrete" aberto={aberto} aoFechar={aoFechar}>
@@ -140,10 +145,11 @@ export function FormTarefa({ aberto, aoFechar, vinculo }: { aberto: boolean; aoF
 
 export function FormInteracao({ vinculo }: { vinculo: { empresaId?: string | null; oportunidadeId?: string | null; contatoId?: string | null } }) {
   const utils = trpc.useUtils();
+  const avisar = useAvisar();
   const [tipo, setTipo] = useState<"nota" | "ligacao" | "email" | "whatsapp" | "reuniao">("nota");
   const [descricao, setDescricao] = useState("");
   const [resposta, setResposta] = useState(false);
-  const reg = trpc.pipeline.registrarInteracao.useMutation({ onSuccess: () => { utils.pipeline.oportunidade.invalidate(); utils.cadastros.empresa.invalidate(); setDescricao(""); setResposta(false); } });
+  const reg = trpc.pipeline.registrarInteracao.useMutation({ onSuccess: () => { avisar("Interação registrada."); utils.pipeline.oportunidade.invalidate(); utils.cadastros.empresa.invalidate(); setDescricao(""); setResposta(false); } });
   return (
     <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); reg.mutate({ ...vinculo, tipo, descricao, respostaDoContato: resposta }); }}>
       <div className="flex gap-2">

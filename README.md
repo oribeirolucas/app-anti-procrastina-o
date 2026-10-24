@@ -3,6 +3,8 @@
 CRM comercial, agente de IA, automações e financeiro num único sistema. Visão de negócio em
 [`empresa/README.md`](empresa/README.md). Arquitetura em [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
+Contexto para desenvolvimento: [`CLAUDE.md`](CLAUDE.md) · estado atual: [`docs/progress.md`](docs/progress.md) · critérios: [`docs/requirements.md`](docs/requirements.md)
+
 ## Situação das entregas
 
 | Etapa | Situação |
@@ -46,4 +48,4 @@ cd server && npm test        # recria o banco plataforma_test a cada execução
 cd client && npx tsc -b && npm run lint
 ```
 
-Docs: [permissões](docs/PERMISSOES.md) · [fórmulas dos indicadores](docs/INDICADORES.md)
+Docs: [operação e diagnóstico](docs/OPERACAO.md) · [permissões](docs/PERMISSOES.md) · [fórmulas dos indicadores](docs/INDICADORES.md)

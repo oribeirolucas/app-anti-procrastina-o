@@ -8,23 +8,31 @@ import { FormContato, FormInteracao, FormOportunidade, FormTarefa } from "../com
 import { FormContrato } from "../components/FormContrato";
 import { Historico } from "../components/Historico";
 import { ListaTarefas } from "../components/Tarefas";
+import { useAvisar } from "../lib/aviso";
 
 export default function EmpresaDetalhe() {
   const { id = "" } = useParams();
   const nav = useNavigate();
   const q = trpc.cadastros.empresa.useQuery({ id });
   const podeContrato = usePode("contratos:escrever");
-  const podeExcluir = usePode("crm:excluir");
+  const podeArquivar = usePode("crm:arquivar");
+  const avisar = useAvisar();
+  const utils = trpc.useUtils();
   const [modal, setModal] = useState<"contato" | "oportunidade" | "tarefa" | "contrato" | null>(null);
   const [contratoEdit, setContratoEdit] = useState<NonNullable<typeof q.data>["contratos"][number] | null>(null);
-  const excluir = trpc.cadastros.excluirEmpresa.useMutation({ onSuccess: () => nav("/empresas") });
+  const arquivar = trpc.cadastros.arquivarEmpresa.useMutation({
+    onSuccess: (e) => { avisar(e.arquivadoEm ? "Empresa arquivada." : "Empresa reativada."); utils.cadastros.invalidate(); if (e.arquivadoEm) nav("/empresas"); },
+  });
 
   if (q.isLoading) return <Carregando />;
   if (!q.data) return <Erro erro={q.error} />;
   const e = q.data;
   return (
-    <Pagina titulo={e.nome} acoes={podeExcluir && <Botao variante="perigo" carregando={excluir.isPending} onClick={() => confirm("Excluir esta empresa e seu histórico?") && excluir.mutate({ id })}>Excluir</Botao>}>
-      <Erro erro={excluir.error} />
+    <Pagina titulo={e.nome} acoes={podeArquivar && (e.arquivadoEm
+      ? <Botao variante="secundario" carregando={arquivar.isPending} onClick={() => arquivar.mutate({ id, arquivar: false })}>Reativar</Botao>
+      : <Botao variante="secundario" carregando={arquivar.isPending} onClick={() => confirm("Arquivar esta empresa? O histórico é mantido e você pode reativá-la depois.") && arquivar.mutate({ id, arquivar: true })}>Arquivar</Botao>)}>
+      {e.arquivadoEm && <p className="rounded-md bg-amber-50 p-2 text-sm text-amber-800">Empresa arquivada. Reative para abrir novas oportunidades.</p>}
+      <Erro erro={arquivar.error} />
       <p className="text-sm text-slate-500">{[e.segmento, e.cidade && `${e.cidade}/${e.uf ?? ""}`, e.telefone, e.documento && `CNPJ ${e.documento}`].filter(Boolean).join(" · ") || "Sem dados adicionais"}</p>
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
