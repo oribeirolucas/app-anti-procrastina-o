@@ -5,13 +5,17 @@ import { ZodError } from "zod";
 import { COOKIE_SESSAO, validarSessao } from "../auth/sessao.js";
 import { pode, type Permissao } from "../auth/permissoes.js";
 import { env } from "../lib/env.js";
+import { traduzirErroBanco } from "../lib/integridade.js";
+import { log } from "../lib/log.js";
 
 export async function criarContexto({ req, res }: { req: IncomingMessage; res: ServerResponse }) {
+  const reqId = String(res.getHeader("x-request-id") ?? "");
   const cookies = parseCookie(req.headers.cookie ?? "");
   const token = cookies[COOKIE_SESSAO];
   const usuario = await validarSessao(token);
   const ip = (req.socket.remoteAddress ?? "desconhecido").replace("::ffff:", "");
   return {
+    reqId,
     usuario,
     token,
     ip,
@@ -26,20 +30,30 @@ export async function criarContexto({ req, res }: { req: IncomingMessage; res: S
 export type Contexto = Awaited<ReturnType<typeof criarContexto>>;
 
 const t = initTRPC.context<Contexto>().create({
-  errorFormatter({ shape, error }) {
+  errorFormatter({ shape, error, ctx, path }) {
     const zod = error.cause instanceof ZodError ? error.cause.flatten() : null;
     // Erros internos não vazam detalhes para o cliente
     const message =
       error.code === "INTERNAL_SERVER_ERROR" ? "Erro interno. Tente novamente ou contate o administrador." : shape.message;
-    if (error.code === "INTERNAL_SERVER_ERROR") console.error("[erro]", error.cause ?? error);
+    if (error.code === "INTERNAL_SERVER_ERROR")
+      log("erro", "trpc.erro_interno", { reqId: ctx?.reqId, path, erro: String(error.cause ?? error), stack: (error.cause as Error | undefined)?.stack?.split("\n").slice(0, 4).join(" | ") });
     return { ...shape, message: zod ? "Dados inválidos. Revise os campos destacados." : message, data: { ...shape.data, zod, stack: undefined } };
   },
 });
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
 
-export const autenticado = t.procedure.use(({ ctx, next }) => {
+// Toda chamada passa por aqui: erros conhecidos do banco viram mensagens claras.
+const base = t.procedure.use(async ({ next }) => {
+  const r = await next();
+  if (!r.ok) {
+    try { traduzirErroBanco(r.error.cause ?? r.error); } catch (e) { if (e !== (r.error.cause ?? r.error)) throw e; }
+  }
+  return r;
+});
+export const publicProcedure = base;
+
+export const autenticado = base.use(({ ctx, next }) => {
   if (!ctx.usuario) throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão expirada. Faça login novamente." });
   return next({ ctx: { ...ctx, usuario: ctx.usuario } });
 });

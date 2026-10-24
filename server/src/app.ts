@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -6,6 +7,7 @@ import { appRouter } from "./router/index.js";
 import { criarContexto } from "./router/trpc.js";
 import { env } from "./lib/env.js";
 import { pool } from "./db/index.js";
+import { log } from "./lib/log.js";
 
 const trpc = createHTTPHandler({ router: appRouter, createContext: criarContexto, basePath: "/trpc/" });
 
@@ -36,11 +38,23 @@ function origemValida(req: http.IncomingMessage): boolean {
 export function criarServidor() {
   return http.createServer(async (req, res) => {
     cabecalhosSeguranca(res);
+    // Identificador da requisição: devolvido ao cliente e presente em todos os logs dela
+    const reqId = randomUUID();
+    res.setHeader("x-request-id", reqId);
+    const inicio = Date.now();
     const url = new URL(req.url ?? "/", "http://local");
+    if (url.pathname.startsWith("/trpc/") || url.pathname.startsWith("/webhooks/"))
+      res.on("finish", () => log(res.statusCode >= 500 ? "erro" : "info", "http", { reqId, metodo: req.method, rota: url.pathname, status: res.statusCode, ms: Date.now() - inicio }));
     try {
       if (url.pathname === "/saude") {
-        await pool.query("select 1");
-        res.writeHead(200, { "content-type": "application/json" }).end('{"ok":true}');
+        // Saúde: processo vivo + banco respondendo. 503 indica que precisa de intervenção.
+        try {
+          await pool.query("select 1");
+          res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true, banco: "ok" }));
+        } catch (e) {
+          log("erro", "saude.banco_indisponivel", { reqId, erro: String(e) });
+          res.writeHead(503, { "content-type": "application/json" }).end(JSON.stringify({ ok: false, banco: "indisponivel" }));
+        }
         return;
       }
       for (const rota of rotasExtras) if (await rota(req, res)) return;
@@ -55,7 +69,7 @@ export function criarServidor() {
       res.writeHead(200, { "content-type": TIPOS[path.extname(arquivo)] ?? "application/octet-stream", "cache-control": arquivo.endsWith("index.html") ? "no-cache" : "public, max-age=31536000, immutable" });
       createReadStream(arquivo).pipe(res);
     } catch (e) {
-      console.error("[http]", e);
+      log("erro", "http.erro", { reqId, rota: url.pathname, erro: String(e) });
       if (!res.headersSent) res.writeHead(500).end("Erro interno");
     }
   });

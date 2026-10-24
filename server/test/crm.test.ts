@@ -41,13 +41,13 @@ describe("fluxo comercial completo", () => {
     expect(o.valor).toBe("597.00");
     expect(o.situacao).toBe("aberta");
 
-    await op.pipeline.moverEtapa({ id: o.id, etapaId: demo.id });
+    const emDemo = await op.pipeline.moverEtapa({ id: o.id, etapaId: demo.id, versao: o.versao });
     await op.pipeline.criarTarefa({ titulo: "Enviar proposta", oportunidadeId: o.id, venceEm: new Date(Date.now() - 1000) });
     const atrasadas = await op.pipeline.tarefas({ situacao: "atrasadas" });
     expect(atrasadas.some((t) => t.titulo === "Enviar proposta")).toBe(true);
     await op.pipeline.registrarInteracao({ tipo: "ligacao", descricao: "Cliente pediu proposta", oportunidadeId: o.id, respostaDoContato: true });
 
-    const ganho = await op.pipeline.moverEtapa({ id: o.id, etapaId: ganha.id });
+    const ganho = await op.pipeline.moverEtapa({ id: o.id, etapaId: ganha.id, versao: emDemo.versao });
     expect(ganho.situacao).toBe("ganha");
     expect(ganho.fechadaEm).not.toBeNull();
 
@@ -59,8 +59,8 @@ describe("fluxo comercial completo", () => {
 
     // Perda exige motivo
     const o2 = await op.pipeline.criarOportunidade({ titulo: "Plano Essencial", empresaId: emp.id, valor: "297" });
-    await expect(op.pipeline.moverEtapa({ id: o2.id, etapaId: perdida.id })).rejects.toThrow("motivo");
-    await op.pipeline.moverEtapa({ id: o2.id, etapaId: perdida.id, motivoPerda: "Preço" });
+    await expect(op.pipeline.moverEtapa({ id: o2.id, etapaId: perdida.id, versao: o2.versao })).rejects.toThrow("motivo");
+    await op.pipeline.moverEtapa({ id: o2.id, etapaId: perdida.id, versao: o2.versao, motivoPerda: "Preço" });
 
     // Operador não registra contrato; gestor sim
     await expect(op.pipeline.salvarContrato({ empresaId: emp.id, plano: "Pro", valorMensal: "597", inicio: "2026-10-01", diaVencimento: 10 })).rejects.toThrow("permissão");
@@ -81,8 +81,9 @@ describe("fluxo comercial completo", () => {
     const evs = await db.select().from(evento).where(eq(evento.tipo, "oportunidade.encerrada"));
     expect(evs.length).toBeGreaterThanOrEqual(2);
 
-    // Empresa com contrato não pode ser excluída
-    await expect(gestor.cadastros.excluirEmpresa({ id: emp.id })).rejects.toThrow("contratos");
+    // Empresa com contrato ativo não pode ser arquivada; operador não arquiva
+    await expect(op.cadastros.arquivarEmpresa({ id: emp.id, arquivar: true })).rejects.toThrow("permissão");
+    await expect(gestor.cadastros.arquivarEmpresa({ id: emp.id, arquivar: true })).rejects.toThrow("contrato ativo");
   });
 
   it("busca e filtros", async () => {

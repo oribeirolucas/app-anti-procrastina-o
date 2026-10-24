@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../../db/index.js";
 import { contato, contrato, empresa, etapaPipeline, oportunidade, tarefa, usuario } from "../../db/schema.js";
@@ -28,7 +28,7 @@ export async function indicadoresComerciais(de: string, ate: string) {
       valor: sql<string>`coalesce(sum(${oportunidade.valor}), 0)::text`,
     })
     .from(etapaPipeline)
-    .leftJoin(oportunidade, and(eq(oportunidade.etapaId, etapaPipeline.id), eq(oportunidade.situacao, "aberta")))
+    .leftJoin(oportunidade, and(eq(oportunidade.etapaId, etapaPipeline.id), eq(oportunidade.situacao, "aberta"), isNull(oportunidade.arquivadoEm)))
     .where(and(eq(etapaPipeline.ativa, true), eq(etapaPipeline.tipo, "aberta")))
     .groupBy(etapaPipeline.id)
     .orderBy(asc(etapaPipeline.ordem));
@@ -137,11 +137,21 @@ export const relatoriosRouter = router({
 
       // Duplicados já existentes no banco
       if (input.entidade === "empresas") {
-        const existentes = new Set((await db.select({ nome: empresa.nome }).from(empresa)).map((e) => e.nome.toLowerCase()));
+        const nomes = validos.map((v) => String(v.dados.nome).toLowerCase());
+        const existentes = new Set(nomes.length ? (await db.select({ nome: empresa.nome }).from(empresa).where(inArray(sql`lower(${empresa.nome})`, nomes))).map((e) => e.nome.toLowerCase()) : []);
         for (let i = validos.length - 1; i >= 0; i--)
           if (existentes.has(String(validos[i].dados.nome).toLowerCase())) { erros.push({ linha: validos[i].linha, erro: "Empresa já cadastrada (ignorada)." }); validos.splice(i, 1); }
+        const docs = validos.map((v) => v.dados.documento).filter((d): d is string => typeof d === "string");
+        const docsExistentes = new Set(docs.length ? (await db.select({ d: empresa.documento }).from(empresa).where(inArray(empresa.documento, docs))).map((e) => e.d) : []);
+        const docsArquivo = new Set<string>();
+        for (let i = 0; i < validos.length; i++) {
+          const d = validos[i].dados.documento as string | null;
+          if (d && (docsExistentes.has(d) || docsArquivo.has(d))) { erros.push({ linha: validos[i].linha, erro: "CNPJ já cadastrado ou repetido (ignorada)." }); validos.splice(i--, 1); }
+          else if (d) docsArquivo.add(d);
+        }
       } else {
-        const existentes = new Set((await db.select({ email: contato.email }).from(contato)).map((c) => c.email).filter(Boolean));
+        const emails = validos.map((v) => v.dados.email).filter((e): e is string => typeof e === "string");
+        const existentes = new Set(emails.length ? (await db.select({ email: contato.email }).from(contato).where(inArray(contato.email, emails))).map((c) => c.email) : []);
         for (let i = validos.length - 1; i >= 0; i--)
           if (validos[i].dados.email && existentes.has(String(validos[i].dados.email))) { erros.push({ linha: validos[i].linha, erro: "E-mail já cadastrado (ignorado)." }); validos.splice(i, 1); }
       }
@@ -153,7 +163,8 @@ export const relatoriosRouter = router({
         if (input.entidade === "empresas") {
           if (validos.length) await tx.insert(empresa).values(validos.map((v) => ({ ...(v.dados as z.infer<typeof empresaInput>), responsavelId: ctx.usuario.id })));
         } else {
-          const mapa = new Map((await tx.select({ id: empresa.id, nome: empresa.nome }).from(empresa)).map((e) => [e.nome.toLowerCase(), e.id]));
+          const nomesEmpresas = [...new Set(validos.map((v) => String(v.dados.empresa ?? "").toLowerCase()).filter(Boolean))];
+          const mapa = new Map(nomesEmpresas.length ? (await tx.select({ id: empresa.id, nome: empresa.nome }).from(empresa).where(inArray(sql`lower(${empresa.nome})`, nomesEmpresas))).map((e) => [e.nome.toLowerCase(), e.id]) : []);
           for (const v of validos) {
             const { empresa: nomeEmpresa, ...c } = v.dados as { empresa?: string } & z.infer<typeof contatoInput>;
             let empresaId: string | null = null;

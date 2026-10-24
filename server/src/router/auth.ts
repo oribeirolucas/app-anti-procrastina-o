@@ -13,6 +13,7 @@ import {
   registrarTentativa,
 } from "../auth/sessao.js";
 import { obterFuso } from "../lib/datas.js";
+import { log } from "../lib/log.js";
 import { auditar } from "../lib/auditoria.js";
 import { publicProcedure, router } from "./trpc.js";
 
@@ -30,6 +31,7 @@ export const authRouter = router({
       const ok = await conferirSenha(u?.senhaHash ?? (await hashFalso), input.senha);
       if (!u || !ok || !u.ativo) {
         await registrarTentativa(input.email, ctx.ip, false);
+        log("aviso", "login.falhou", { reqId: ctx.reqId, ip: ctx.ip });
         throw new TRPCError({ code: "UNAUTHORIZED", message: "E-mail ou senha incorretos." });
       }
       await registrarTentativa(input.email, ctx.ip, true);

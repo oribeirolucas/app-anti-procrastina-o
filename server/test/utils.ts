@@ -20,7 +20,7 @@ export async function criarUsuario(perfil: Perfil, email = `${perfil}-${Math.ran
 
 export function contextoAnonimo(ip = "10.0.0.1") {
   const cookies: string[] = [];
-  const ctx: Contexto = { usuario: null, token: undefined, ip, definirCookie: (v) => cookies.push(v) };
+  const ctx: Contexto = { reqId: "teste", usuario: null, token: undefined, ip, definirCookie: (v) => cookies.push(v) };
   return { ctx, cookies };
 }
 
@@ -29,5 +29,5 @@ export async function chamadorComo(perfil: Perfil | "anonimo") {
   const u = await criarUsuario(perfil);
   const [p] = await db.select().from(usuario).where(eq(usuario.id, u.id));
   const { senhaHash: _s, ...publico } = p;
-  return Object.assign(appRouter.createCaller({ usuario: publico, token: "x", ip: "10.0.0.2", definirCookie: () => {} }), { usuario: publico });
+  return Object.assign(appRouter.createCaller({ reqId: "teste", usuario: publico, token: "x", ip: "10.0.0.2", definirCookie: () => {} }), { usuario: publico });
 }

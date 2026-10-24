@@ -1,11 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, gte, ilike, isNotNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../../db/index.js";
 import { contato, contrato, empresa, etapaPipeline, interacao, oportunidade, tarefa, usuario } from "../../db/schema.js";
 import { auditar } from "../../lib/auditoria.js";
 import { normalizarValorBR } from "../../lib/dinheiro.js";
 import { emitirEvento } from "../../lib/eventos.js";
+import { conflitoDeVersao } from "../../lib/integridade.js";
+import { pode } from "../../auth/permissoes.js";
 import { autenticado, comPermissao, router } from "../trpc.js";
 
 const valor = z
@@ -66,9 +68,10 @@ export const pipelineRouter = router({
       responsavelId: z.string().uuid().optional(),
       situacao: z.enum(["aberta", "ganha", "perdida"]).optional(),
       origem: z.string().max(60).optional(),
+      arquivadas: z.boolean().default(false),
     }).default({}))
     .query(({ input }) => {
-      const f: SQL[] = [];
+      const f: SQL[] = [input.arquivadas ? isNotNull(oportunidade.arquivadoEm) : isNull(oportunidade.arquivadoEm)];
       if (input.busca) f.push(or(ilike(oportunidade.titulo, `%${input.busca}%`), ilike(empresa.nome, `%${input.busca}%`))!);
       if (input.etapaId) f.push(eq(oportunidade.etapaId, input.etapaId));
       if (input.responsavelId) f.push(eq(oportunidade.responsavelId, input.responsavelId));
@@ -79,7 +82,7 @@ export const pipelineRouter = router({
           id: oportunidade.id, titulo: oportunidade.titulo, valor: oportunidade.valor, situacao: oportunidade.situacao,
           origem: oportunidade.origem, etapaId: oportunidade.etapaId, previsaoFechamento: oportunidade.previsaoFechamento,
           empresaId: oportunidade.empresaId, empresa: empresa.nome, contato: contato.nome, responsavel: usuario.nome,
-          responsavelId: oportunidade.responsavelId, atualizadoEm: oportunidade.atualizadoEm,
+          responsavelId: oportunidade.responsavelId, atualizadoEm: oportunidade.atualizadoEm, versao: oportunidade.versao,
         })
         .from(oportunidade)
         .leftJoin(empresa, eq(empresa.id, oportunidade.empresaId))
@@ -107,8 +110,9 @@ export const pipelineRouter = router({
           .from(interacao)
           .leftJoin(usuario, eq(usuario.id, interacao.usuarioId))
           .where(eq(interacao.oportunidadeId, input.id))
-          .orderBy(desc(interacao.criadoEm)),
-        db.select().from(tarefa).where(eq(tarefa.oportunidadeId, input.id)).orderBy(asc(tarefa.concluida), asc(tarefa.venceEm)),
+          .orderBy(desc(interacao.criadoEm))
+          .limit(300),
+        db.select().from(tarefa).where(eq(tarefa.oportunidadeId, input.id)).orderBy(asc(tarefa.concluida), asc(tarefa.venceEm)).limit(200),
       ]);
       return { ...o.o, empresa: o.empresa, contato: o.contato, responsavel: o.responsavel, interacoes, tarefas };
     }),
@@ -118,65 +122,91 @@ export const pipelineRouter = router({
     .mutation(async ({ ctx, input }) => {
       const etapa = input.etapaId
         ? await etapaOuErro(input.etapaId)
-        : (await db.select().from(etapaPipeline).where(eq(etapaPipeline.ativa, true)).orderBy(asc(etapaPipeline.ordem)).limit(1))[0];
-      if (!etapa) throw new TRPCError({ code: "BAD_REQUEST", message: "Configure ao menos uma etapa do pipeline." });
-      const [o] = await db
-        .insert(oportunidade)
-        .values({ ...input, etapaId: etapa.id, situacao: etapa.tipo, responsavelId: input.responsavelId ?? ctx.usuario.id, fechadaEm: etapa.tipo === "aberta" ? null : new Date() })
-        .returning();
-      await db.insert(interacao).values({ tipo: "alteracao", descricao: `Oportunidade criada na etapa "${etapa.nome}".`, oportunidadeId: o.id, empresaId: o.empresaId, contatoId: o.contatoId, usuarioId: ctx.usuario.id });
-      await emitirEvento("oportunidade.criada", { oportunidadeId: o.id, etapaId: etapa.id });
-      return o;
+        : (await db.select().from(etapaPipeline).where(and(eq(etapaPipeline.ativa, true), eq(etapaPipeline.tipo, "aberta"))).orderBy(asc(etapaPipeline.ordem)).limit(1))[0];
+      if (!etapa) throw new TRPCError({ code: "BAD_REQUEST", message: "Configure ao menos uma etapa aberta no pipeline." });
+      if (etapa.tipo !== "aberta") throw new TRPCError({ code: "BAD_REQUEST", message: "Uma oportunidade nova precisa começar numa etapa aberta." });
+      if (input.empresaId) {
+        const [e] = await db.select({ arquivadoEm: empresa.arquivadoEm }).from(empresa).where(eq(empresa.id, input.empresaId));
+        if (!e) throw new TRPCError({ code: "BAD_REQUEST", message: "Empresa inexistente." });
+        if (e.arquivadoEm) throw new TRPCError({ code: "BAD_REQUEST", message: "Empresa arquivada: reative-a antes de abrir oportunidades." });
+      }
+      return db.transaction(async (tx) => {
+        const [o] = await tx
+          .insert(oportunidade)
+          .values({ ...input, etapaId: etapa.id, situacao: "aberta", responsavelId: input.responsavelId ?? ctx.usuario.id })
+          .returning();
+        await tx.insert(interacao).values({ tipo: "alteracao", descricao: `Oportunidade criada na etapa "${etapa.nome}".`, oportunidadeId: o.id, empresaId: o.empresaId, contatoId: o.contatoId, usuarioId: ctx.usuario.id });
+        await emitirEvento("oportunidade.criada", { oportunidadeId: o.id, etapaId: etapa.id }, undefined, tx);
+        return o;
+      });
     }),
 
   atualizarOportunidade: comPermissao("crm:escrever")
-    .input(oportunidadeInput.omit({ etapaId: true }).partial().extend({ id: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...campos } = input;
-      const [antes] = await db.select().from(oportunidade).where(eq(oportunidade.id, id));
-      if (!antes) throw new TRPCError({ code: "NOT_FOUND", message: "Oportunidade não encontrada." });
-      const [o] = await db.update(oportunidade).set({ ...campos, atualizadoEm: new Date() }).where(eq(oportunidade.id, id)).returning();
-      const mudancas = Object.entries(campos)
-        .filter(([k, v]) => String((antes as Record<string, unknown>)[k] ?? "") !== String(v ?? ""))
-        .map(([k, v]) => `${k}: "${(antes as Record<string, unknown>)[k] ?? ""}" → "${v ?? ""}"`);
-      if (mudancas.length)
-        await db.insert(interacao).values({ tipo: "alteracao", descricao: `Alterado — ${mudancas.join("; ")}`, oportunidadeId: id, empresaId: o.empresaId, usuarioId: ctx.usuario.id });
-      return o;
-    }),
+    .input(oportunidadeInput.omit({ etapaId: true }).partial().extend({ id: z.string().uuid(), versao: z.number().int().min(1) }))
+    .mutation(({ ctx, input }) =>
+      db.transaction(async (tx) => {
+        const { id, versao, ...campos } = input;
+        const [antes] = await tx.select().from(oportunidade).where(eq(oportunidade.id, id));
+        if (!antes) throw new TRPCError({ code: "NOT_FOUND", message: "Oportunidade não encontrada." });
+        const [o] = await tx
+          .update(oportunidade)
+          .set({ ...campos, versao: sql`${oportunidade.versao} + 1`, atualizadoEm: new Date() })
+          .where(and(eq(oportunidade.id, id), eq(oportunidade.versao, versao)))
+          .returning();
+        if (!o) throw conflitoDeVersao();
+        const mudancas = Object.entries(campos)
+          .filter(([k, v]) => String((antes as Record<string, unknown>)[k] ?? "") !== String(v ?? ""))
+          .map(([k, v]) => `${k}: "${(antes as Record<string, unknown>)[k] ?? ""}" → "${v ?? ""}"`);
+        if (mudancas.length)
+          await tx.insert(interacao).values({ tipo: "alteracao", descricao: `Alterado — ${mudancas.join("; ")}`, oportunidadeId: id, empresaId: o.empresaId, usuarioId: ctx.usuario.id });
+        return o;
+      }),
+    ),
 
+  // Transições: aberta ↔ aberta e aberta → ganha/perdida para todos; reabrir ou trocar uma encerrada exige crm:reabrir.
   moverEtapa: comPermissao("crm:escrever")
-    .input(z.object({ id: z.string().uuid(), etapaId: z.string().uuid(), motivoPerda: z.string().trim().max(200).optional() }))
+    .input(z.object({ id: z.string().uuid(), etapaId: z.string().uuid(), versao: z.number().int().min(1), motivoPerda: z.string().trim().max(200).optional() }))
     .mutation(async ({ ctx, input }) => {
       const [antes] = await db.select().from(oportunidade).where(eq(oportunidade.id, input.id));
       if (!antes) throw new TRPCError({ code: "NOT_FOUND", message: "Oportunidade não encontrada." });
+      if (antes.arquivadoEm) throw new TRPCError({ code: "BAD_REQUEST", message: "Oportunidade arquivada não pode mudar de etapa." });
       if (antes.etapaId === input.etapaId) return antes;
       const [de, para] = await Promise.all([etapaOuErro(antes.etapaId), etapaOuErro(input.etapaId)]);
+      if (!para.ativa) throw new TRPCError({ code: "BAD_REQUEST", message: "Etapa desativada." });
+      if (antes.situacao !== "aberta" && !pode(ctx.usuario.perfil, "crm:reabrir"))
+        throw new TRPCError({ code: "FORBIDDEN", message: "Oportunidade encerrada: só gestor ou admin pode reabrir ou alterar o resultado." });
       if (para.tipo === "perdida" && !input.motivoPerda)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Informe o motivo da perda." });
-      const [o] = await db
-        .update(oportunidade)
-        .set({
-          etapaId: para.id,
-          situacao: para.tipo,
-          motivoPerda: para.tipo === "perdida" ? input.motivoPerda : null,
-          fechadaEm: para.tipo === "aberta" ? null : new Date(),
-          atualizadoEm: new Date(),
-        })
-        .where(eq(oportunidade.id, input.id))
-        .returning();
-      const sufixo = para.tipo === "perdida" ? ` Motivo: ${input.motivoPerda}` : "";
-      await db.insert(interacao).values({ tipo: "alteracao", descricao: `Etapa: "${de.nome}" → "${para.nome}".${sufixo}`, oportunidadeId: o.id, empresaId: o.empresaId, contatoId: o.contatoId, usuarioId: ctx.usuario.id });
-      await emitirEvento("oportunidade.etapa_alterada", { oportunidadeId: o.id, deEtapaId: de.id, paraEtapaId: para.id });
-      if (para.tipo !== "aberta") await emitirEvento("oportunidade.encerrada", { oportunidadeId: o.id, situacao: para.tipo });
-      return o;
+      return db.transaction(async (tx) => {
+        const [o] = await tx
+          .update(oportunidade)
+          .set({
+            etapaId: para.id,
+            situacao: para.tipo,
+            motivoPerda: para.tipo === "perdida" ? input.motivoPerda : null,
+            fechadaEm: para.tipo === "aberta" ? null : new Date(),
+            versao: sql`${oportunidade.versao} + 1`,
+            atualizadoEm: new Date(),
+          })
+          .where(and(eq(oportunidade.id, input.id), eq(oportunidade.versao, input.versao)))
+          .returning();
+        if (!o) throw conflitoDeVersao();
+        const sufixo = para.tipo === "perdida" ? ` Motivo: ${input.motivoPerda}` : "";
+        await tx.insert(interacao).values({ tipo: "alteracao", descricao: `Etapa: "${de.nome}" → "${para.nome}".${sufixo}`, oportunidadeId: o.id, empresaId: o.empresaId, contatoId: o.contatoId, usuarioId: ctx.usuario.id });
+        await emitirEvento("oportunidade.etapa_alterada", { oportunidadeId: o.id, deEtapaId: de.id, paraEtapaId: para.id }, undefined, tx);
+        if (para.tipo !== "aberta") await emitirEvento("oportunidade.encerrada", { oportunidadeId: o.id, situacao: para.tipo }, undefined, tx);
+        if (antes.situacao !== "aberta") await auditar(ctx.usuario.id, "oportunidade.reabrir_ou_alterar_resultado", "oportunidade", o.id, { de: antes.situacao, para: para.tipo }, tx);
+        return o;
+      });
     }),
 
-  excluirOportunidade: comPermissao("crm:excluir")
-    .input(z.object({ id: z.string().uuid() }))
+  arquivarOportunidade: comPermissao("crm:arquivar")
+    .input(z.object({ id: z.string().uuid(), arquivar: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const [o] = await db.delete(oportunidade).where(eq(oportunidade.id, input.id)).returning({ titulo: oportunidade.titulo });
-      await auditar(ctx.usuario.id, "oportunidade.excluir", "oportunidade", input.id, { titulo: o?.titulo });
-      return { ok: true };
+      const [o] = await db.update(oportunidade).set({ arquivadoEm: input.arquivar ? new Date() : null, versao: sql`${oportunidade.versao} + 1` }).where(eq(oportunidade.id, input.id)).returning();
+      if (!o) throw new TRPCError({ code: "NOT_FOUND", message: "Oportunidade não encontrada." });
+      await auditar(ctx.usuario.id, input.arquivar ? "oportunidade.arquivar" : "oportunidade.desarquivar", "oportunidade", o.id, { titulo: o.titulo });
+      return o;
     }),
 
   registrarInteracao: comPermissao("crm:escrever")
@@ -196,10 +226,12 @@ export const pipelineRouter = router({
         const [o] = await db.select().from(oportunidade).where(eq(oportunidade.id, input.oportunidadeId));
         empresaId ??= o?.empresaId; contatoId ??= o?.contatoId;
       }
-      const [i] = await db.insert(interacao).values({ ...input, empresaId, contatoId, usuarioId: ctx.usuario.id }).returning();
-      if (input.oportunidadeId) await db.update(oportunidade).set({ atualizadoEm: new Date() }).where(eq(oportunidade.id, input.oportunidadeId));
-      if (input.respostaDoContato) await emitirEvento("interacao.resposta_contato", { interacaoId: i.id, contatoId, oportunidadeId: input.oportunidadeId });
-      return i;
+      return db.transaction(async (tx) => {
+        const [i] = await tx.insert(interacao).values({ ...input, empresaId, contatoId, usuarioId: ctx.usuario.id }).returning();
+        if (input.oportunidadeId) await tx.update(oportunidade).set({ atualizadoEm: new Date() }).where(eq(oportunidade.id, input.oportunidadeId));
+        if (input.respostaDoContato) await emitirEvento("interacao.resposta_contato", { interacaoId: i.id, contatoId, oportunidadeId: input.oportunidadeId }, undefined, tx);
+        return i;
+      });
     }),
 
   tarefas: comPermissao("crm:ler")
@@ -258,6 +290,7 @@ export const pipelineRouter = router({
         .innerJoin(empresa, eq(empresa.id, contrato.empresaId))
         .where(f.length ? and(...f) : undefined)
         .orderBy(sql`${contrato.fim} asc nulls last`)
+        .limit(500)
         .then((r) => r.map((x) => ({ ...x.c, empresa: x.empresa })));
     }),
 
@@ -277,12 +310,15 @@ export const pipelineRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (input.fim && input.fim < input.inicio) throw new TRPCError({ code: "BAD_REQUEST", message: "O fim do contrato precisa ser depois do início." });
       const { id, ...campos } = input;
+      return db.transaction(async (tx) => {
       const [c] = id
-        ? await db.update(contrato).set({ ...campos, atualizadoEm: new Date() }).where(eq(contrato.id, id)).returning()
-        : await db.insert(contrato).values(campos).returning();
-      await db.insert(interacao).values({ tipo: "alteracao", descricao: `Contrato ${c.plano} ${id ? "atualizado" : "registrado"} (${c.situacao}).`, empresaId: c.empresaId, oportunidadeId: c.oportunidadeId, usuarioId: ctx.usuario.id });
-      await auditar(ctx.usuario.id, id ? "contrato.atualizar" : "contrato.criar", "contrato", c.id, { valorMensal: c.valorMensal, situacao: c.situacao });
-      if (!id) await emitirEvento("contrato.criado", { contratoId: c.id, empresaId: c.empresaId });
+        ? await tx.update(contrato).set({ ...campos, atualizadoEm: new Date() }).where(eq(contrato.id, id)).returning()
+        : await tx.insert(contrato).values(campos).returning();
+      if (!c) throw new TRPCError({ code: "NOT_FOUND", message: "Contrato não encontrado." });
+      await tx.insert(interacao).values({ tipo: "alteracao", descricao: `Contrato ${c.plano} ${id ? "atualizado" : "registrado"} (${c.situacao}).`, empresaId: c.empresaId, oportunidadeId: c.oportunidadeId, usuarioId: ctx.usuario.id });
+      await auditar(ctx.usuario.id, id ? "contrato.atualizar" : "contrato.criar", "contrato", c.id, { valorMensal: c.valorMensal, situacao: c.situacao }, tx);
+      if (!id) await emitirEvento("contrato.criado", { contratoId: c.id, empresaId: c.empresaId }, undefined, tx);
       return c;
+      });
     }),
 });

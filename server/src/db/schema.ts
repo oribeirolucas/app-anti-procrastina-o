@@ -13,12 +13,17 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // Valores monetários: numeric(14,2) no banco, string no TypeScript.
 // Cálculos são feitos em centavos (inteiros) — ver src/lib/dinheiro.ts.
 const dinheiro = (nome: string) => numeric(nome, { precision: 14, scale: 2 });
 const criadoEm = () => timestamp("criado_em", { withTimezone: true }).notNull().defaultNow();
 const atualizadoEm = () => timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow();
+// Controle de concorrência otimista: toda edição envia a versão lida; se mudou, a gravação é recusada.
+const versao = () => integer("versao").notNull().default(1);
+// Arquivamento em vez de exclusão física: preserva histórico e indicadores.
+const arquivadoEm = () => timestamp("arquivado_em", { withTimezone: true });
 
 // ───────────────────────── Fundação ─────────────────────────
 
@@ -95,10 +100,16 @@ export const empresa = pgTable(
     site: varchar("site", { length: 200 }),
     observacoes: text("observacoes"),
     responsavelId: uuid("responsavel_id").references(() => usuario.id, { onDelete: "set null" }),
+    versao: versao(),
+    arquivadoEm: arquivadoEm(),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
-  (t) => [index("empresa_nome_idx").on(t.nome)],
+  (t) => [
+    index("empresa_nome_idx").on(t.nome),
+    uniqueIndex("empresa_documento_uq").on(t.documento).where(sql`documento is not null`),
+    uniqueIndex("empresa_nome_uq").on(sql`lower(${t.nome})`),
+  ],
 );
 
 export const contato = pgTable(
@@ -112,10 +123,13 @@ export const contato = pgTable(
     cargo: varchar("cargo", { length: 100 }),
     // Opt-out: bloqueia qualquer follow-up automático para este contato.
     descadastrado: boolean("descadastrado").notNull().default(false),
+    versao: versao(),
+    arquivadoEm: arquivadoEm(),
+    anonimizadoEm: timestamp("anonimizado_em", { withTimezone: true }),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
-  (t) => [index("contato_empresa_idx").on(t.empresaId), index("contato_email_idx").on(t.email)],
+  (t) => [index("contato_empresa_idx").on(t.empresaId), uniqueIndex("contato_email_uq").on(t.email).where(sql`email is not null`)],
 );
 
 export const etapaPipeline = pgTable("etapa_pipeline", {
@@ -146,6 +160,8 @@ export const oportunidade = pgTable(
     motivoPerda: varchar("motivo_perda", { length: 200 }),
     previsaoFechamento: date("previsao_fechamento"),
     fechadaEm: timestamp("fechada_em", { withTimezone: true }),
+    versao: versao(),
+    arquivadoEm: arquivadoEm(),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
