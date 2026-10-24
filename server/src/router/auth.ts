@@ -12,6 +12,7 @@ import {
   hashSenha,
   registrarTentativa,
 } from "../auth/sessao.js";
+import { obterFuso } from "../lib/datas.js";
 import { auditar } from "../lib/auditoria.js";
 import { publicProcedure, router } from "./trpc.js";
 
@@ -45,8 +46,8 @@ export const authRouter = router({
     return { ok: true };
   }),
 
-  eu: publicProcedure.query(({ ctx }) => {
+  eu: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.usuario) return null;
-    return { ...ctx.usuario, permissoes: permissoesDoPerfil(ctx.usuario.perfil) };
+    return { ...ctx.usuario, permissoes: permissoesDoPerfil(ctx.usuario.perfil), fuso: await obterFuso() };
   }),
 });
