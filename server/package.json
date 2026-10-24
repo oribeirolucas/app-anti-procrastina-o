@@ -9,11 +9,15 @@
     "start": "node dist/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed-validation": "tsx src/db/seed-validation.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "db:seed:ficticios": "tsx src/db/seed.ts --ficticios",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.47.10",
+    "@node-rs/argon2": "^2.2.2",
     "@trpc/server": "^11.0.0",
+    "cookie": "^2.0.1",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.36.4",
     "pg": "^8.13.1",
@@ -24,6 +28,7 @@
     "@types/pg": "^8.11.10",
     "drizzle-kit": "^0.28.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^5.0.5"
   }
 }

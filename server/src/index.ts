@@ -1,12 +1,9 @@
-import "dotenv/config";
-import http from "node:http";
-import { createHTTPServer } from "@trpc/server/adapters/standalone";
-import { appRouter } from "./router/index.js";
+import { criarServidor } from "./app.js";
+import { env } from "./lib/env.js";
 
-const server = createHTTPServer({
-  router: appRouter,
-});
+const servidor = criarServidor();
+servidor.listen(env.port, () => console.log(`Servidor em http://localhost:${env.port}`));
 
-const port = Number(process.env.PORT) || 3000;
-server.listen(port);
-console.log(`tRPC server rodando em http://localhost:${port}`);
+const encerrar = () => servidor.close(() => process.exit(0));
+process.on("SIGTERM", encerrar);
+process.on("SIGINT", encerrar);

@@ -1,7 +1,16 @@
+import { adminRouter } from "./admin.js";
+import { authRouter } from "./auth.js";
+import { cadastrosRouter } from "./crm/cadastros.js";
+import { pipelineRouter } from "./crm/pipeline.js";
+import { relatoriosRouter } from "./crm/relatorios.js";
 import { router } from "./trpc.js";
 
-// Endpoints (diagnóstico, recomendação, lead, admin, etc.) serão adicionados
-// em etapas futuras. Este roteador raiz existe só para validar a estrutura.
-export const appRouter = router({});
+export const appRouter = router({
+  auth: authRouter,
+  admin: adminRouter,
+  cadastros: cadastrosRouter,
+  pipeline: pipelineRouter,
+  relatorios: relatoriosRouter,
+});
 
 export type AppRouter = typeof appRouter;
