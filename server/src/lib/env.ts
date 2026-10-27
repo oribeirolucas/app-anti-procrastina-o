@@ -15,4 +15,10 @@ export const env = {
   fusoHorario: process.env.FUSO_HORARIO || "America/Sao_Paulo",
   // Origem permitida para requisições que mudam estado (proteção CSRF por Origin)
   origemApp: process.env.ORIGEM_APP || "http://localhost:5173",
+  // Atrás de proxy confiável (Vercel, Caddy/Nginx na VPS) o IP real vem em X-Forwarded-For
+  confiarProxy: process.env.TRUST_PROXY === "1",
+  // Segredo do endpoint /tarefas/processar (agendador externo). Sem ele, o endpoint fica desativado.
+  segredoCron: process.env.CRON_SECRET || "",
+  // Intervalo do processador de automações no servidor Node (0 desliga)
+  intervaloWorkerS: Number(process.env.WORKER_INTERVALO_S ?? 30),
 };

@@ -240,9 +240,18 @@ export const evento = pgTable(
     // Chave opcional para evitar eventos duplicados (ex.: webhook reenviado)
     chaveIdempotencia: varchar("chave_idempotencia", { length: 200 }),
     processadoEm: timestamp("processado_em", { withTimezone: true }),
+    // pendente | processado | falhou (falhou = esgotou tentativas, exige intervenção)
+    situacao: varchar("situacao", { length: 12 }).notNull().default("pendente"),
+    tentativas: integer("tentativas").notNull().default(0),
+    proximaTentativaEm: timestamp("proxima_tentativa_em", { withTimezone: true }),
+    ultimoErro: text("ultimo_erro"),
     criadoEm: criadoEm(),
   },
-  (t) => [index("evento_pendente_idx").on(t.processadoEm, t.criadoEm), uniqueIndex("evento_idem_uq").on(t.chaveIdempotencia)],
+  (t) => [
+    index("evento_pendente_idx").on(t.situacao, t.proximaTentativaEm, t.criadoEm),
+    uniqueIndex("evento_idem_uq").on(t.chaveIdempotencia),
+    check("evento_situacao_ck", sql`${t.situacao} in ('pendente','processado','falhou')`),
+  ],
 );
 
 // ───────────────────────── Financeiro ─────────────────────────
@@ -302,3 +311,123 @@ export const lancamento = pgTable(
     check("lanc_cancel_ck", sql`(${t.situacao} = 'cancelado') = (${t.motivoCancelamento} is not null)`),
   ],
 );
+
+// ───────────────────────── Automações ─────────────────────────
+
+// Gatilho → condições → ações. Condições e ações em JSON validado por Zod (lib/automacoes/tipos.ts).
+export const automacao = pgTable(
+  "automacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 120 }).notNull(),
+    gatilho: varchar("gatilho", { length: 60 }).notNull(),
+    condicoes: jsonb("condicoes").notNull().default({}),
+    acoes: jsonb("acoes").notNull(),
+    ativa: boolean("ativa").notNull().default(true),
+    versao: versao(),
+    criadoPorId: uuid("criado_por_id").references(() => usuario.id, { onDelete: "set null" }),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [index("automacao_gatilho_idx").on(t.gatilho, t.ativa)],
+);
+
+// Uma linha por (automação, evento): o índice único é o que impede execução duplicada.
+export const execucaoAutomacao = pgTable(
+  "execucao_automacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    automacaoId: uuid("automacao_id")
+      .notNull()
+      .references(() => automacao.id, { onDelete: "cascade" }),
+    eventoId: uuid("evento_id")
+      .notNull()
+      .references(() => evento.id, { onDelete: "cascade" }),
+    // sucesso | ignorada (condição não atendida) | erro
+    situacao: varchar("situacao", { length: 10 }).notNull(),
+    tentativas: integer("tentativas").notNull().default(1),
+    detalhes: jsonb("detalhes"),
+    erro: text("erro"),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex("execucao_automacao_evento_uq").on(t.automacaoId, t.eventoId),
+    index("execucao_criado_idx").on(t.criadoEm),
+    check("execucao_situacao_ck", sql`${t.situacao} in ('sucesso','ignorada','erro')`),
+  ],
+);
+
+export const notificacao = pgTable(
+  "notificacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => usuario.id, { onDelete: "cascade" }),
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    mensagem: text("mensagem"),
+    link: varchar("link", { length: 300 }),
+    lidaEm: timestamp("lida_em", { withTimezone: true }),
+    // Evita notificar duas vezes pelo mesmo motivo (ex.: automação + evento)
+    chave: varchar("chave", { length: 200 }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("notificacao_usuario_idx").on(t.usuarioId, t.lidaEm), uniqueIndex("notificacao_chave_uq").on(t.usuarioId, t.chave)],
+);
+
+export const sequenciaFollowup = pgTable("sequencia_followup", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  nome: varchar("nome", { length: 120 }).notNull(),
+  // [{ aposDias: number, titulo: string }]
+  passos: jsonb("passos").notNull(),
+  ativa: boolean("ativa").notNull().default(true),
+  criadoEm: criadoEm(),
+  atualizadoEm: atualizadoEm(),
+});
+
+export const inscricaoFollowup = pgTable(
+  "inscricao_followup",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sequenciaId: uuid("sequencia_id")
+      .notNull()
+      .references(() => sequenciaFollowup.id, { onDelete: "cascade" }),
+    oportunidadeId: uuid("oportunidade_id")
+      .notNull()
+      .references(() => oportunidade.id, { onDelete: "cascade" }),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    passoAtual: integer("passo_atual").notNull().default(0), // índice do próximo passo
+    proximoEm: timestamp("proximo_em", { withTimezone: true }),
+    // ativa | concluida | interrompida
+    situacao: varchar("situacao", { length: 12 }).notNull().default("ativa"),
+    motivoParada: varchar("motivo_parada", { length: 120 }),
+    iniciadaEm: criadoEm(),
+    encerradaEm: timestamp("encerrada_em", { withTimezone: true }),
+  },
+  (t) => [
+    index("inscricao_proximo_idx").on(t.situacao, t.proximoEm),
+    // Uma oportunidade não fica inscrita duas vezes, ao mesmo tempo, na mesma sequência
+    uniqueIndex("inscricao_ativa_uq").on(t.sequenciaId, t.oportunidadeId).where(sql`situacao = 'ativa'`),
+    check("inscricao_situacao_ck", sql`${t.situacao} in ('ativa','concluida','interrompida')`),
+  ],
+);
+
+// Origem de captação (landing page, formulário, n8n). modo: hmac (servidor-a-servidor) | publico (formulário no site).
+export const origemCaptacao = pgTable("origem_captacao", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  nome: varchar("nome", { length: 120 }).notNull(),
+  modo: varchar("modo", { length: 8 }).notNull(),
+  // Segredo HMAC (modo hmac). Necessário em texto para verificar a assinatura; exibido só na criação/rotação.
+  segredo: varchar("segredo", { length: 100 }),
+  etapaId: uuid("etapa_id")
+    .notNull()
+    .references(() => etapaPipeline.id),
+  origemRotulo: varchar("origem_rotulo", { length: 60 }).notNull().default("site"),
+  // Domínio autorizado para o formulário público (CORS). Ex.: https://minhaclinica.com.br
+  dominioPermitido: varchar("dominio_permitido", { length: 200 }),
+  ativa: boolean("ativa").notNull().default(true),
+  recebidos: integer("recebidos").notNull().default(0),
+  ultimoRecebimentoEm: timestamp("ultimo_recebimento_em", { withTimezone: true }),
+  criadoEm: criadoEm(),
+});

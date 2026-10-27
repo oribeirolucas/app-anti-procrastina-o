@@ -16,7 +16,14 @@ function Raiz() {
       new QueryClient({
         // Sessão expirada em qualquer chamada → reconsulta auth.eu, que leva à tela de login
         queryCache: new QueryCache({ onError: (e): void => { if (naoAutenticado(e)) void qc.invalidateQueries({ queryKey: [["auth", "eu"]] }); } }),
-        mutationCache: new MutationCache({ onError: (e): void => { if (naoAutenticado(e)) void qc.invalidateQueries({ queryKey: [["auth", "eu"]] }); } }),
+        mutationCache: new MutationCache({
+          onError: (e): void => { if (naoAutenticado(e)) void qc.invalidateQueries({ queryKey: [["auth", "eu"]] }); },
+          // Automações rodam no servidor logo após cada alteração e podem criar tarefas, avisos e follow-ups:
+          // atualiza essas listas em qualquer tela para o efeito aparecer na hora.
+          onSuccess: (): void => {
+            for (const k of [["automacoes"], ["pipeline", "tarefas"], ["pipeline", "oportunidade"], ["cadastros", "empresa"]]) void qc.invalidateQueries({ queryKey: [k] });
+          },
+        }),
         defaultOptions: {
           queries: {
             retry: (n, e) => !(e instanceof TRPCClientError && ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].includes(e.data?.code)) && n < 2,

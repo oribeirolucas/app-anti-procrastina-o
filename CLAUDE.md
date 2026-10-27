@@ -37,8 +37,8 @@ Plataforma interna da Recepção IA (CRM, financeiro, automações, agente de IA
 - **Rotas aninhadas** (`/x/*`): links e `Navigate` com caminho absoluto (relativos geraram laço de redirecionamento).
 - **Datas**: validar existência no servidor (`2025-06-31` precisa dar 400, não 500).
 - **Financeiro**: lançamento não é excluído. Cancelamento exige motivo e pago precisa de estorno antes. Regras também como CHECK no banco.
+- **Zod 4**: em objetos com campos que têm padrão, use `.prefault({})`, não `.default({})` (no v4 o `.default` não aplica os padrões internos).
 - Componentes de UI em `client/src/components/ui.tsx`. Avisos com `useAvisar()`. Estados de carregando/erro/vazio em toda lista.
 
 ## Arquitetura
 Ver `ARCHITECTURE.md`. Indicadores: `docs/INDICADORES.md`. Operação/diagnóstico: `docs/OPERACAO.md`.
-- **Zod 4**: em objetos com campos que têm padrão, use `.prefault({})`, não `.default({})` (no v4 o `.default` não aplica os padrões internos).

@@ -7,13 +7,15 @@ import { pode, type Permissao } from "../auth/permissoes.js";
 import { env } from "../lib/env.js";
 import { traduzirErroBanco } from "../lib/integridade.js";
 import { log } from "../lib/log.js";
+import { ipDoCliente } from "../lib/ip.js";
+import { executarCiclo } from "../automacoes/motor.js";
 
 export async function criarContexto({ req, res }: { req: IncomingMessage; res: ServerResponse }) {
   const reqId = String(res.getHeader("x-request-id") ?? "");
   const cookies = parseCookie(req.headers.cookie ?? "");
   const token = cookies[COOKIE_SESSAO];
   const usuario = await validarSessao(token);
-  const ip = (req.socket.remoteAddress ?? "desconhecido").replace("::ffff:", "");
+  const ip = ipDoCliente(req);
   return {
     reqId,
     usuario,
@@ -44,11 +46,15 @@ const t = initTRPC.context<Contexto>().create({
 export const router = t.router;
 
 // Toda chamada passa por aqui: erros conhecidos do banco viram mensagens claras.
-const base = t.procedure.use(async ({ next }) => {
+const base = t.procedure.use(async ({ next, type, ctx }) => {
   const r = await next();
   if (!r.ok) {
     try { traduzirErroBanco(r.error.cause ?? r.error); } catch (e) { if (e !== (r.error.cause ?? r.error)) throw e; }
   }
+  // Após uma alteração bem-sucedida, processa a fila de automações (resultado imediato, inclusive em serverless).
+  // Falha aqui nunca derruba a requisição do usuário: fica registrada e o evento é reprocessado depois.
+  if (r.ok && type === "mutation" && process.env.AUTOMACOES_INLINE !== "0")
+    await executarCiclo({ limite: 20 }).catch((e) => log("erro", "automacao.ciclo_inline", { reqId: ctx.reqId, erro: String(e) }));
   return r;
 });
 export const publicProcedure = base;

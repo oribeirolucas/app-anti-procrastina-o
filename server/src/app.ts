@@ -8,6 +8,9 @@ import { criarContexto } from "./router/trpc.js";
 import { env } from "./lib/env.js";
 import { pool } from "./db/index.js";
 import { log } from "./lib/log.js";
+import { rotaWebhooks } from "./webhooks/captacao.js";
+import { executarCiclo } from "./automacoes/motor.js";
+import { timingSafeEqual } from "node:crypto";
 
 const trpc = createHTTPHandler({ router: appRouter, createContext: criarContexto, basePath: "/trpc/" });
 
@@ -59,6 +62,17 @@ export async function tratarRequisicao(req: http.IncomingMessage, res: http.Serv
         return;
       }
       for (const rota of rotasExtras) if (await rota(req, res)) return;
+      if (url.pathname.startsWith("/webhooks/") && (await rotaWebhooks(req, res))) return;
+      if (url.pathname === "/tarefas/processar") {
+        // Agendador externo (ex.: cron da Vercel). Exige Authorization: Bearer <CRON_SECRET>.
+        const esperado = Buffer.from(`Bearer ${env.segredoCron}`);
+        const veio = Buffer.from(String(req.headers.authorization ?? ""));
+        if (!env.segredoCron || esperado.length !== veio.length || !timingSafeEqual(esperado, veio)) { res.writeHead(404).end(); return; }
+        const r = await executarCiclo();
+        log("info", "automacao.ciclo_agendado", { reqId, ...r });
+        res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(r));
+        return;
+      }
       if (url.pathname.startsWith("/trpc/")) {
         if (!origemValida(req)) { res.writeHead(403).end("Origem não permitida"); return; }
         return trpc(req, res);

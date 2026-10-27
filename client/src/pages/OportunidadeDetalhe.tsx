@@ -1,13 +1,33 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { trpc } from "../lib/trpc";
-import { data, moeda } from "../lib/formato";
+import { data, dataHora, moeda } from "../lib/formato";
 import { usePode } from "../lib/sessao";
 import { Botao, Campo, Carregando, Cartao, Erro, Etiqueta, Pagina, Selecao } from "../components/ui";
 import { FormInteracao, FormTarefa } from "../components/formularios";
 import { Historico } from "../components/Historico";
 import { ListaTarefas } from "../components/Tarefas";
 import { useAvisar } from "../lib/aviso";
+
+function FollowupDaOportunidade({ oportunidadeId }: { oportunidadeId: string }) {
+  const utils = trpc.useUtils();
+  const avisar = useAvisar();
+  const q = trpc.automacoes.inscricoes.useQuery({ oportunidadeId });
+  const parar = trpc.automacoes.interromperFollowup.useMutation({ onSuccess: () => { utils.automacoes.inscricoes.invalidate(); utils.pipeline.oportunidade.invalidate(); avisar("Follow-up interrompido."); } });
+  if (!q.data?.length) return null;
+  const ativas = q.data.filter((i) => i.situacao === "ativa");
+  return (
+    <Cartao titulo="Follow-up" acoes={ativas.length > 0 && <Botao variante="secundario" carregando={parar.isPending} onClick={() => confirm("Interromper o follow-up desta oportunidade?") && parar.mutate({ oportunidadeId })}>Interromper</Botao>}>
+      <ul className="space-y-1 text-sm">{q.data.map((i) => (
+        <li key={i.id}>
+          <b>{i.sequencia}</b> · passo {Math.min(i.passoAtual, i.totalPassos)}/{i.totalPassos} · {i.situacao}
+          {i.situacao === "ativa" && i.proximoEm && <span className="text-xs text-slate-500"> · próximo em {dataHora(i.proximoEm)}</span>}
+          {i.motivoParada && <span className="text-xs text-slate-500"> · {i.motivoParada}</span>}
+        </li>
+      ))}</ul>
+    </Cartao>
+  );
+}
 
 export default function OportunidadeDetalhe() {
   const { id = "" } = useParams();
@@ -76,6 +96,7 @@ export default function OportunidadeDetalhe() {
             </form>
           </Cartao>
           <Cartao titulo="Tarefas" acoes={<Botao variante="secundario" onClick={() => setTarefa(true)}>+</Botao>}><ListaTarefas tarefas={o.tarefas} /></Cartao>
+          <FollowupDaOportunidade oportunidadeId={id} />
         </div>
       </div>
       <FormTarefa aberto={tarefa} aoFechar={() => setTarefa(false)} vinculo={{ oportunidadeId: id, empresaId: o.empresaId, contatoId: o.contatoId }} />

@@ -10,7 +10,8 @@ export type TipoEvento =
   | "oportunidade.encerrada"
   | "interacao.resposta_contato"
   | "contrato.criado"
-  | "webhook.recebido";
+  | "contrato.vencendo"
+  | "lead.captado";
 
 /** Registra um evento. Retorna false se a chave de idempotência já existia (duplicado). */
 export async function emitirEvento(
