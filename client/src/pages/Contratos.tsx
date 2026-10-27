@@ -42,11 +42,18 @@ function Detalhe({ id, aoFechar, aoEditar }: { id: string; aoFechar: () => void;
   const [motivo, setMotivo] = useState("");
   const [cancelarFuturas, setCancelarFuturas] = useState(true);
   const fechar = () => { setAcao(null); setMotivo(""); setNovoValor(""); };
-  const renovar = trpc.contratos.renovar.useMutation({ onSuccess: (c) => { utils.contratos.invalidate(); avisar(`Renovado até ${data(c.fim)}.`); fechar(); } });
+  // Aplica na hora o contrato devolvido pelo servidor (versão nova) antes de recarregar:
+  // sem isso, uma segunda ação feita antes do recarregamento iria com versão antiga e daria conflito.
+  const aplicar = (novo: { versao: number; situacao: string; fim: string | null; valorMensal: string; motivoSituacao: string | null }) => {
+    utils.contratos.obter.setData({ id }, (v) => (v ? { ...v, ...novo } : v));
+    void utils.contratos.invalidate();
+  };
+  const renovar = trpc.contratos.renovar.useMutation({ onSuccess: (c) => { aplicar(c); avisar(`Renovado até ${data(c.fim)}.`); fechar(); } });
   const situacao = trpc.contratos.alterarSituacao.useMutation({
-    onSuccess: (r) => { utils.contratos.invalidate(); utils.financeiro.invalidate(); avisar(`Contrato ${r.contrato.situacao === "ativo" ? "reativado" : r.contrato.situacao}.${r.cobrancasCanceladas ? ` ${r.cobrancasCanceladas} cobrança(s) futura(s) cancelada(s).` : ""}`); fechar(); },
+    onSuccess: (r) => { aplicar(r.contrato); void utils.financeiro.invalidate(); avisar(`Contrato ${r.contrato.situacao === "ativo" ? "reativado" : r.contrato.situacao}.${r.cobrancasCanceladas ? ` ${r.cobrancasCanceladas} cobrança(s) futura(s) cancelada(s).` : ""}`); fechar(); },
   });
   const c = q.data;
+  const ocupado = renovar.isPending || situacao.isPending || q.isFetching;
   const ROTULO_ACAO: Record<string, string> = { "contrato.criar": "Registrado", "contrato.atualizar": "Editado", "contrato.renovar": "Renovado", "contrato.suspender": "Suspenso", "contrato.reativar": "Reativado", "contrato.cancelar": "Cancelado" };
 
   return (
@@ -69,12 +76,12 @@ function Detalhe({ id, aoFechar, aoEditar }: { id: string; aoFechar: () => void;
 
           {podeEscrever && c.situacao !== "cancelado" && !acao && (
             <div className="flex flex-wrap gap-2">
-              <Botao variante="secundario" onClick={() => aoEditar(c)}>Editar</Botao>
-              {c.fim && <Botao variante="secundario" onClick={() => { setAcao("renovar"); setNovoValor(c.valorMensal.replace(".", ",")); }}>Renovar</Botao>}
+              <Botao variante="secundario" disabled={ocupado} onClick={() => aoEditar(c)}>Editar</Botao>
+              {c.fim && <Botao variante="secundario" disabled={ocupado} onClick={() => { setAcao("renovar"); setNovoValor(c.valorMensal.replace(".", ",")); }}>Renovar</Botao>}
               {c.situacao === "ativo"
-                ? <Botao variante="secundario" onClick={() => setAcao("suspenso")}>Suspender</Botao>
-                : <Botao variante="secundario" carregando={situacao.isPending} onClick={() => situacao.mutate({ id: c.id, versao: c.versao, situacao: "ativo" })}>Reativar</Botao>}
-              <Botao variante="perigo" onClick={() => setAcao("cancelado")}>Cancelar contrato</Botao>
+                ? <Botao variante="secundario" disabled={ocupado} onClick={() => setAcao("suspenso")}>Suspender</Botao>
+                : <Botao variante="secundario" disabled={ocupado} carregando={situacao.isPending} onClick={() => situacao.mutate({ id: c.id, versao: c.versao, situacao: "ativo" })}>Reativar</Botao>}
+              <Botao variante="perigo" disabled={ocupado} onClick={() => setAcao("cancelado")}>Cancelar contrato</Botao>
             </div>
           )}
           {acao === "renovar" && (
