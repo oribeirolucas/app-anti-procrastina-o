@@ -108,7 +108,8 @@ export const empresa = pgTable(
   (t) => [
     index("empresa_nome_idx").on(t.nome),
     uniqueIndex("empresa_documento_uq").on(t.documento).where(sql`documento is not null`),
-    uniqueIndex("empresa_nome_uq").on(sql`lower(${t.nome})`),
+    // Regra P2: nome único por cidade (cidade vazia conta como um valor)
+    uniqueIndex("empresa_nome_cidade_uq").on(sql`lower(${t.nome})`, sql`lower(coalesce(${t.cidade}, ''))`),
   ],
 );
 

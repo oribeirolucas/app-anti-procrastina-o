@@ -5,11 +5,11 @@
 - Hospedagem alvo: VPS + Docker, infraestrutura ≤ R$ 100/mês.
 - Autenticação própria (sem provedor externo).
 - Dados iniciais: fictícios, marcados `[FICTÍCIO]`/`[E2E]`. Importação de dados reais só com autorização.
-- **Premissas de regra de negócio (confirmar):**
+- **Regras de negócio confirmadas pelo responsável em 27/10/2026:**
   - P1. Reabrir oportunidade ganha/perdida: só gestor/admin, com auditoria.
-  - P2. Nome de empresa é único (sem diferenciar maiúsculas). CNPJ é único quando informado. E-mail de contato é único quando informado.
+  - P2. Empresa é única por **nome + cidade** (sem diferenciar maiúsculas). CNPJ é único quando informado. E-mail de contato é único quando informado.
   - P3. Exclusão = arquivamento. Anonimização (LGPD) é irreversível e só para admin.
-  - P4. Retenção: registros arquivados ficam guardados indefinidamente até haver uma política definida pelo negócio.
+  - P4. Registros arquivados são guardados **indefinidamente**, até o responsável definir um prazo de retenção.
 
 ## Definição de "concluído" (vale para toda funcionalidade)
 Fluxo executável pela interface · regra aplicada no backend · persistência verificada · permissão testada ·
@@ -47,6 +47,8 @@ erros e estados vazios tratados · testes pertinentes passando · nada simulado 
 - A3. Follow-up para ao haver resposta do contato, opt-out ou encerramento da oportunidade.
 - A4. Sem processamento duplicado (idempotência). Tentativas limitadas, com histórico de execução e erro.
 - A5. Webhook autenticado (HMAC), repetido sem efeito duplicado.
+- A7. **Origens de captação** (landing page, formulário): cada origem tem chave própria, define o funil e a etapa de entrada,
+  e o sistema mostra o snippet/URL para colar no site. A chave pode ser revogada. O mesmo lead reenviado não duplica o contato.
 - A6. Pausar e retomar automação.
 
 ### Agente de IA (etapa 5)
@@ -55,3 +57,10 @@ erros e estados vazios tratados · testes pertinentes passando · nada simulado 
 - I3. Conteúdo do usuário e dos documentos é tratado como dado. Tentativa de manipular instruções não altera permissões.
 - I4. Limite de consumo configurável e registro de tokens/custo e de falhas.
 - I5. Conversa e dados autorizados registrados no CRM. Transferência para humano.
+- I6. **Caso de transferência**: ao não poder resolver, o agente abre um caso com motivo e resumo da conversa,
+  com situação (aberto → em andamento → resolvido), responsável e prazo. O humano pode instruir o agente dentro do caso,
+  e o agente responde ao cliente com base na instrução (registrado na linha do tempo). Casos abertos e vencidos aparecem no painel.
+- I7. **Regras obrigatórias**: lista de regras (ex.: "nunca pedir CPF sem autorização humana") aplicada a todos os agentes,
+  editável só com `agente:gerir` e versionada (quem mudou e quando). Precedência sobre a base de conhecimento.
+- I8. **Aprovação humana de propostas**: o agente só *sugere* proposta comercial, mudança de etapa ou agendamento.
+  A sugestão aparece na oportunidade/kanban para aprovar ou recusar. Nada é confirmado ao cliente antes da aprovação.

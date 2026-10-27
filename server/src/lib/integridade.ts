@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 // Mensagens para violações de unicidade (código Postgres 23505), pelo nome do índice.
 const MENSAGENS: Record<string, string> = {
   empresa_documento_uq: "Já existe uma empresa com este CNPJ.",
-  empresa_nome_uq: "Já existe uma empresa com este nome.",
+  empresa_nome_cidade_uq: "Já existe uma empresa com este nome nesta cidade.",
   contato_email_uq: "Já existe um contato com este e-mail.",
   usuario_email_unique: "Já existe um usuário com este e-mail.",
 };

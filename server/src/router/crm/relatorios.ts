@@ -75,6 +75,7 @@ export async function indicadoresComerciais(de: string, ate: string) {
 }
 
 type Erro = { linha: number; erro: string };
+const chaveEmpresa = (e: { nome: string; cidade?: string | null }) => `${e.nome.toLowerCase()}|${(e.cidade ?? "").toLowerCase()}`;
 
 export const relatoriosRouter = router({
   indicadores: comPermissao("crm:ler")
@@ -129,7 +130,7 @@ export const relatoriosRouter = router({
           erros.push({ linha, erro: res.error.issues.map((x) => `${x.path.join(".")}: ${x.message}`).join("; ") });
           return;
         }
-        const chave = input.entidade === "empresas" ? (res.data as { nome: string }).nome.toLowerCase() : ((res.data as { email?: string | null }).email ?? `${linha}`);
+        const chave = input.entidade === "empresas" ? chaveEmpresa(res.data as { nome: string; cidade?: string | null }) : ((res.data as { email?: string | null }).email ?? `${linha}`);
         if (vistos.has(chave)) { erros.push({ linha, erro: "Registro duplicado no arquivo." }); return; }
         vistos.add(chave);
         validos.push({ linha, dados: res.data as Record<string, unknown> });
@@ -138,9 +139,9 @@ export const relatoriosRouter = router({
       // Duplicados já existentes no banco
       if (input.entidade === "empresas") {
         const nomes = validos.map((v) => String(v.dados.nome).toLowerCase());
-        const existentes = new Set(nomes.length ? (await db.select({ nome: empresa.nome }).from(empresa).where(inArray(sql`lower(${empresa.nome})`, nomes))).map((e) => e.nome.toLowerCase()) : []);
+        const existentes = new Set(nomes.length ? (await db.select({ nome: empresa.nome, cidade: empresa.cidade }).from(empresa).where(inArray(sql`lower(${empresa.nome})`, nomes))).map(chaveEmpresa) : []);
         for (let i = validos.length - 1; i >= 0; i--)
-          if (existentes.has(String(validos[i].dados.nome).toLowerCase())) { erros.push({ linha: validos[i].linha, erro: "Empresa já cadastrada (ignorada)." }); validos.splice(i, 1); }
+          if (existentes.has(chaveEmpresa(validos[i].dados as { nome: string; cidade?: string | null }))) { erros.push({ linha: validos[i].linha, erro: "Empresa já cadastrada nesta cidade (ignorada)." }); validos.splice(i, 1); }
         const docs = validos.map((v) => v.dados.documento).filter((d): d is string => typeof d === "string");
         const docsExistentes = new Set(docs.length ? (await db.select({ d: empresa.documento }).from(empresa).where(inArray(empresa.documento, docs))).map((e) => e.d) : []);
         const docsArquivo = new Set<string>();
@@ -154,6 +155,19 @@ export const relatoriosRouter = router({
         const existentes = new Set(emails.length ? (await db.select({ email: contato.email }).from(contato).where(inArray(contato.email, emails))).map((c) => c.email) : []);
         for (let i = validos.length - 1; i >= 0; i--)
           if (validos[i].dados.email && existentes.has(String(validos[i].dados.email))) { erros.push({ linha: validos[i].linha, erro: "E-mail já cadastrado (ignorado)." }); validos.splice(i, 1); }
+      }
+
+      // Contatos: o nome da empresa precisa apontar para no máximo uma empresa (pode haver homônimas em cidades diferentes)
+      if (input.entidade === "contatos") {
+        const nomesEmp = [...new Set(validos.map((v) => String(v.dados.empresa ?? "").toLowerCase()).filter(Boolean))];
+        const contagem = new Map<string, number>();
+        if (nomesEmp.length)
+          for (const e of await db.select({ nome: empresa.nome }).from(empresa).where(inArray(sql`lower(${empresa.nome})`, nomesEmp)))
+            contagem.set(e.nome.toLowerCase(), (contagem.get(e.nome.toLowerCase()) ?? 0) + 1);
+        for (let i = validos.length - 1; i >= 0; i--) {
+          const n = String(validos[i].dados.empresa ?? "").toLowerCase();
+          if (n && (contagem.get(n) ?? 0) > 1) { erros.push({ linha: validos[i].linha, erro: "Há mais de uma empresa com este nome (cidades diferentes): vincule o contato manualmente." }); validos.splice(i, 1); }
+        }
       }
 
       erros.sort((a, b) => a.linha - b.linha);

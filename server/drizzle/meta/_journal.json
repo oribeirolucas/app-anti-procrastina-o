@@ -15,6 +15,13 @@
       "when": 1792813399764,
       "tag": "0001_integridade_arquivamento",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793116667566,
+      "tag": "0002_empresa_nome_cidade",
+      "breakpoints": true
     }
   ]
 }

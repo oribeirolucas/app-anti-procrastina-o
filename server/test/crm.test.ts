@@ -114,3 +114,15 @@ describe("fluxo comercial completo", () => {
     expect(exp.conteudo).toContain("ana@imp.dev");
   });
 });
+
+describe("importação com empresas homônimas", () => {
+  it("contato apontando para nome de empresa ambíguo é reportado por linha, não vinculado ao acaso", async () => {
+    const g = await chamadorComo("gestor");
+    await g.cadastros.criarEmpresa({ nome: "Sorriso Homônimo", cidade: "Natal" });
+    await g.cadastros.criarEmpresa({ nome: "Sorriso Homônimo", cidade: "Belém" });
+    const r = await g.relatorios.importar({ entidade: "contatos", conteudo: "nome;empresa\nBia;Sorriso Homônimo", simular: true });
+    expect(r.validos).toBe(0);
+    expect(r.erros[0]).toMatchObject({ linha: 2 });
+    expect(r.erros[0].erro).toContain("mais de uma empresa");
+  });
+});

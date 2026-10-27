@@ -8,10 +8,13 @@ const codigo = async (p: Promise<unknown>) => {
 beforeAll(prepararBase);
 
 describe("integridade de dados", () => {
-  it("duplicidade de empresa (nome sem diferenciar maiúsculas e CNPJ) e de e-mail de contato é recusada", async () => {
+  it("duplicidade de empresa (nome+cidade sem diferenciar maiúsculas, e CNPJ) e de e-mail de contato é recusada", async () => {
     const op = await chamadorComo("operador");
     await op.cadastros.criarEmpresa({ nome: "Clínica Duplicada", documento: "11.111.111/0001-11" });
-    await expect(op.cadastros.criarEmpresa({ nome: "clínica duplicada" })).rejects.toThrow("com este nome");
+    await expect(op.cadastros.criarEmpresa({ nome: "clínica duplicada" })).rejects.toThrow("nesta cidade");
+    // Regra P2: mesmo nome em outra cidade é permitido; repetido na mesma cidade, não
+    await op.cadastros.criarEmpresa({ nome: "Clínica Duplicada", cidade: "Recife" });
+    await expect(op.cadastros.criarEmpresa({ nome: "CLÍNICA DUPLICADA", cidade: "recife" })).rejects.toThrow("nesta cidade");
     await expect(op.cadastros.criarEmpresa({ nome: "Outra", documento: "11111111000111" })).rejects.toThrow("CNPJ");
     expect(await codigo(op.cadastros.criarEmpresa({ nome: "CNPJ curto", documento: "123" }))).toBe("BAD_REQUEST");
     await op.cadastros.criarContato({ nome: "Ana", email: "ana.dup@teste.dev" });
