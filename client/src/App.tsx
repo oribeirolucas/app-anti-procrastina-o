@@ -14,6 +14,7 @@ import OportunidadeDetalhe from "./pages/OportunidadeDetalhe";
 import Tarefas from "./pages/Tarefas";
 import Contratos from "./pages/Contratos";
 import Admin from "./pages/Admin";
+import Financeiro from "./pages/Financeiro";
 
 type ItemMenu = { para: string; rotulo: string; permissao?: Eu["permissoes"][number] };
 const MENU: ItemMenu[] = [
@@ -23,6 +24,7 @@ const MENU: ItemMenu[] = [
   { para: "/contatos", rotulo: "Contatos" },
   { para: "/tarefas", rotulo: "Tarefas" },
   { para: "/contratos", rotulo: "Contratos" },
+  { para: "/financeiro", rotulo: "Financeiro", permissao: "financeiro:ler" },
   { para: "/admin", rotulo: "Administração", permissao: "auditoria:ver" },
 ];
 
@@ -62,6 +64,7 @@ function Layout({ eu }: { eu: Eu }) {
             <Route path="/oportunidades/:id" element={<OportunidadeDetalhe />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/contratos" element={<Contratos />} />
+            {eu.permissoes.includes("financeiro:ler") && <Route path="/financeiro/*" element={<Financeiro />} />}
             {eu.permissoes.includes("auditoria:ver") && <Route path="/admin/*" element={<Admin />} />}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

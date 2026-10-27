@@ -3,7 +3,7 @@
 import { eq, sql } from "drizzle-orm";
 import { hashSenha } from "../auth/sessao.js";
 import { db, pool } from "./index.js";
-import { contato, empresa, etapaPipeline, oportunidade, tarefa, usuario } from "./schema.js";
+import { categoriaFinanceira, contato, empresa, etapaPipeline, oportunidade, tarefa, usuario } from "./schema.js";
 
 export const ETAPAS_PADRAO = [
   { nome: "Lead", ordem: 1, tipo: "aberta", probabilidade: 10 },
@@ -14,7 +14,14 @@ export const ETAPAS_PADRAO = [
   { nome: "Perdida", ordem: 6, tipo: "perdida", probabilidade: 0 },
 ] as const;
 
+// "Mensalidades" e "Setup" são usadas pela geração automática de cobranças.
+export const CATEGORIAS_PADRAO = [
+  ...["Mensalidades", "Setup", "Outras receitas"].map((nome) => ({ nome, tipo: "receita" })),
+  ...["Infraestrutura", "IA e APIs", "WhatsApp API", "Marketing", "Impostos", "Pró-labore", "Ferramentas", "Outras despesas"].map((nome) => ({ nome, tipo: "despesa" })),
+];
+
 export async function seedBase(adminEmail: string, adminSenha: string) {
+  await db.insert(categoriaFinanceira).values(CATEGORIAS_PADRAO).onConflictDoNothing();
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(etapaPipeline);
   if (n === 0) await db.insert(etapaPipeline).values([...ETAPAS_PADRAO]);
   const existe = await db.select({ id: usuario.id }).from(usuario).where(eq(usuario.email, adminEmail));

@@ -35,11 +35,18 @@ erros e estados vazios tratados · testes pertinentes passando · nada simulado 
 - C8. Indicadores conforme `docs/INDICADORES.md`. Oportunidade nunca conta como receita.
 
 ### Financeiro (etapa 3)
-- R1. Lançamentos de receita e despesa com categoria, competência, vencimento e pagamento/recebimento.
-- R2. Contas a receber geradas a partir de contratos ativos, sem duplicar a mesma competência.
-- R3. Fluxo de caixa realizado (por data de pagamento) × previsto (por vencimento), por período.
-- R4. Cada número do dashboard leva aos lançamentos que o compõem.
-- R5. Diferença explícita entre vendido (contrato), faturado (conta a receber) e recebido.
+- R1. Lançamento de receita ou despesa com descrição, categoria, valor, competência (mês), vencimento e,
+  ao baixar, data e valor efetivamente pagos/recebidos. Não há exclusão: cancelamento exige motivo e sai de todos os totais.
+- R2. "Gerar cobranças do mês" cria uma mensalidade por contrato ativo naquele mês (vencimento no dia de cobrança)
+  e a taxa de setup no mês de início. Rodar de novo não duplica (garantido por índice único).
+- R3. Fluxo de caixa: **realizado** = baixas por data de pagamento. **Previsto** = lançamentos não cancelados por
+  vencimento. Exibido mês a mês no período, com saldo e diferença previsto × realizado.
+- R4. Todo número do painel financeiro abre a lista de lançamentos que o compõe (mesmos filtros).
+- R5. O painel mostra lado a lado: vendido (MRR de contratos ativos), faturado (receitas por competência),
+  recebido (receitas baixadas) e em atraso (pendentes vencidos).
+- R6. Contas a receber/pagar: listas de pendentes com atraso destacado. Baixa com valor diferente do previsto
+  (juros/desconto) é permitida e a diferença fica visível.
+- R7. Operador não vê nem altera o financeiro (backend e menu). Categorias com uso não podem ser removidas, só desativadas.
 
 ### Automações (etapa 4)
 - A1. Gatilho → condição → ação. Gatilhos: cadastro, mudança de etapa e vencimento.

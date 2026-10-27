@@ -28,3 +28,9 @@ export function baixarArquivo(nome: string, conteudo: string, tipo = "text/csv;c
   a.href = url; a.download = nome; a.click();
   URL.revokeObjectURL(url);
 }
+
+/** Último dia do mês "AAAA-MM" como AAAA-MM-DD (evita datas inválidas como 31/06). */
+export const fimDoMesISO = (mes: string) => {
+  const [a, m] = mes.split("-").map(Number);
+  return new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10);
+};

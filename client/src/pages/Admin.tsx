@@ -144,9 +144,9 @@ function Configuracoes() {
 export default function Admin() {
   const gerirUsuarios = usePode("usuarios:gerir");
   const abas = [
-    ...(gerirUsuarios ? [{ para: "usuarios", rotulo: "Usuários e permissões" }, { para: "configuracoes", rotulo: "Configurações" }] : []),
-    { para: "etapas", rotulo: "Pipeline" },
-    { para: "auditoria", rotulo: "Auditoria" },
+    ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }] : []),
+    { para: "/admin/etapas", rotulo: "Pipeline" },
+    { para: "/admin/auditoria", rotulo: "Auditoria" },
   ];
   return (
     <Pagina titulo="Administração">

@@ -17,7 +17,7 @@ Plataforma interna da Recepção IA (CRM, financeiro, automações, agente de IA
 | Nova migração | editar `server/src/db/schema.ts` → `cd server && npx drizzle-kit generate --name <nome>` |
 | Aplicar migrações | `cd server && npm run db:migrate` |
 | Subir local | `cd server && npm run dev` + `cd client && npm run dev` |
-| E2E no navegador | `cd client && BASE_URL=http://localhost:3000 E2E_EMAIL=… E2E_SENHA=… node e2e/jornada-crm.cjs` |
+| E2E no navegador | `cd client && BASE_URL=http://localhost:3000 E2E_EMAIL=… E2E_SENHA=… node e2e/jornada-crm.cjs` (e `jornada-financeiro.cjs`) |
 
 ## Convenções (obrigatórias)
 - **Permissão no backend**: todo procedimento usa `comPermissao("<permissao>")`. A matriz única
@@ -34,6 +34,9 @@ Plataforma interna da Recepção IA (CRM, financeiro, automações, agente de IA
 - **Testes**: não enfraquecer validação ou permissão para um teste passar. Corrija a causa.
 - **Integrações externas**: nunca disparar mensagens reais em teste. Toda ação externa precisa de chave de idempotência.
 - Textos da interface em pt-BR. Valores em R$. Datas dd/mm/aaaa.
+- **Rotas aninhadas** (`/x/*`): links e `Navigate` com caminho absoluto (relativos geraram laço de redirecionamento).
+- **Datas**: validar existência no servidor (`2025-06-31` precisa dar 400, não 500).
+- **Financeiro**: lançamento não é excluído. Cancelamento exige motivo e pago precisa de estorno antes. Regras também como CHECK no banco.
 - Componentes de UI em `client/src/components/ui.tsx`. Avisos com `useAvisar()`. Estados de carregando/erro/vazio em toda lista.
 
 ## Arquitetura

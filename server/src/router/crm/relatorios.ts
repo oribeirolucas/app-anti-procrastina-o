@@ -10,10 +10,11 @@ import { deCentavos, paraCentavos } from "../../lib/dinheiro.js";
 import { comPermissao, router } from "../trpc.js";
 import { contatoInput, empresaInput } from "./cadastros.js";
 
-const periodo = z.object({
-  de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
+const dataValida = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
+  .refine((d) => { const x = new Date(`${d}T00:00:00Z`); return !isNaN(x.getTime()) && x.toISOString().slice(0, 10) === d; }, "Data inexistente.");
+const periodo = z.object({ de: dataValida, ate: dataValida });
 
 // Fórmulas documentadas em docs/INDICADORES.md
 export async function indicadoresComerciais(de: string, ate: string) {
@@ -25,7 +26,7 @@ export async function indicadoresComerciais(de: string, ate: string) {
       etapa: etapaPipeline.nome,
       probabilidade: etapaPipeline.probabilidade,
       quantidade: sql<number>`count(${oportunidade.id})::int`,
-      valor: sql<string>`coalesce(sum(${oportunidade.valor}), 0)::text`,
+      valor: sql<string>`coalesce(sum(${oportunidade.valor}), 0)::numeric(14,2)::text`,
     })
     .from(etapaPipeline)
     .leftJoin(oportunidade, and(eq(oportunidade.etapaId, etapaPipeline.id), eq(oportunidade.situacao, "aberta"), isNull(oportunidade.arquivadoEm)))
@@ -34,7 +35,7 @@ export async function indicadoresComerciais(de: string, ate: string) {
     .orderBy(asc(etapaPipeline.ordem));
 
   const encerradas = await db
-    .select({ situacao: oportunidade.situacao, quantidade: sql<number>`count(*)::int`, valor: sql<string>`coalesce(sum(${oportunidade.valor}),0)::text` })
+    .select({ situacao: oportunidade.situacao, quantidade: sql<number>`count(*)::int`, valor: sql<string>`coalesce(sum(${oportunidade.valor}), 0)::numeric(14,2)::text` })
     .from(oportunidade)
     .where(and(gte(oportunidade.fechadaEm, inicio), lt(oportunidade.fechadaEm, fimExclusivo)))
     .groupBy(oportunidade.situacao);
@@ -52,7 +53,7 @@ export async function indicadoresComerciais(de: string, ate: string) {
     .where(and(eq(tarefa.concluida, false), lte(tarefa.venceEm, new Date())));
 
   const [{ mrrContratado }] = await db
-    .select({ mrrContratado: sql<string>`coalesce(sum(${contrato.valorMensal}),0)::text` })
+    .select({ mrrContratado: sql<string>`coalesce(sum(${contrato.valorMensal}), 0)::numeric(14,2)::text` })
     .from(contrato)
     .where(eq(contrato.situacao, "ativo"));
 

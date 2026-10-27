@@ -12,6 +12,7 @@ import {
   date,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -242,4 +243,62 @@ export const evento = pgTable(
     criadoEm: criadoEm(),
   },
   (t) => [index("evento_pendente_idx").on(t.processadoEm, t.criadoEm), uniqueIndex("evento_idem_uq").on(t.chaveIdempotencia)],
+);
+
+// ───────────────────────── Financeiro ─────────────────────────
+
+export const categoriaFinanceira = pgTable(
+  "categoria_financeira",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 80 }).notNull(),
+    tipo: varchar("tipo", { length: 10 }).notNull(), // receita | despesa
+    ativa: boolean("ativa").notNull().default(true),
+    criadoEm: criadoEm(),
+  },
+  (t) => [uniqueIndex("categoria_nome_tipo_uq").on(sql`lower(${t.nome})`, t.tipo), check("categoria_tipo_ck", sql`${t.tipo} in ('receita','despesa')`)],
+);
+
+export const lancamento = pgTable(
+  "lancamento",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tipo: varchar("tipo", { length: 10 }).notNull(), // receita | despesa
+    descricao: varchar("descricao", { length: 200 }).notNull(),
+    categoriaId: uuid("categoria_id")
+      .notNull()
+      .references(() => categoriaFinanceira.id),
+    valor: dinheiro("valor").notNull(), // valor previsto (> 0)
+    competencia: date("competencia").notNull(), // sempre o dia 1 do mês de referência
+    vencimento: date("vencimento").notNull(),
+    // pendente | pago | cancelado
+    situacao: varchar("situacao", { length: 10 }).notNull().default("pendente"),
+    pagoEm: date("pago_em"),
+    valorPago: dinheiro("valor_pago"),
+    motivoCancelamento: varchar("motivo_cancelamento", { length: 200 }),
+    // manual | mensalidade | setup
+    origem: varchar("origem", { length: 12 }).notNull().default("manual"),
+    empresaId: uuid("empresa_id").references(() => empresa.id, { onDelete: "restrict" }),
+    contratoId: uuid("contrato_id").references(() => contrato.id, { onDelete: "restrict" }),
+    observacao: text("observacao"),
+    criadoPorId: uuid("criado_por_id").references(() => usuario.id, { onDelete: "set null" }),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index("lanc_vencimento_idx").on(t.situacao, t.vencimento),
+    index("lanc_pago_idx").on(t.pagoEm),
+    index("lanc_competencia_idx").on(t.competencia),
+    // Idempotência da geração de cobranças a partir de contratos
+    uniqueIndex("lanc_mensalidade_uq").on(t.contratoId, t.competencia).where(sql`origem = 'mensalidade'`),
+    uniqueIndex("lanc_setup_uq").on(t.contratoId).where(sql`origem = 'setup'`),
+    // Consistência garantida pelo banco, não só pela aplicação
+    check("lanc_tipo_ck", sql`${t.tipo} in ('receita','despesa')`),
+    check("lanc_situacao_ck", sql`${t.situacao} in ('pendente','pago','cancelado')`),
+    check("lanc_valor_ck", sql`${t.valor} > 0 and (${t.valorPago} is null or ${t.valorPago} >= 0)`),
+    check("lanc_competencia_ck", sql`extract(day from ${t.competencia}) = 1`),
+    check("lanc_baixa_ck", sql`(${t.situacao} = 'pago') = (${t.pagoEm} is not null and ${t.valorPago} is not null)`),
+    check("lanc_cancel_ck", sql`(${t.situacao} = 'cancelado') = (${t.motivoCancelamento} is not null)`),
+  ],
 );

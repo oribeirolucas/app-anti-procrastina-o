@@ -17,7 +17,11 @@ const valor = z
     catch { ctx.addIssue({ code: "custom", message: "Valor inválido." }); return z.NEVER; }
   })
   .refine((v) => !v.startsWith("-"), "O valor não pode ser negativo.");
-const dataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.");
+// Formato e existência (rejeita 31/06, 30/02 etc.)
+const dataISO = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
+  .refine((d) => { const x = new Date(`${d}T00:00:00Z`); return !isNaN(x.getTime()) && x.toISOString().slice(0, 10) === d; }, "Data inexistente.");
 
 const oportunidadeInput = z.object({
   titulo: z.string().trim().min(2, "Informe o título.").max(200),

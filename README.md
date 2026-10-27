@@ -11,8 +11,8 @@ Contexto para desenvolvimento: [`CLAUDE.md`](CLAUDE.md) · estado atual: [`docs/
 |---|---|
 | 1. Fundação (banco, login, perfis, auditoria, interface) | ✅ funcionando e testada |
 | 2. CRM (empresas, contatos, pipeline, tarefas, histórico, contratos, CSV, indicadores) | ✅ funcionando e testada |
-| 3. Financeiro | ⏳ próxima |
-| 4. Automações | ⏳ fila de eventos já gravada pelo CRM |
+| 3. Financeiro (lançamentos, contas a pagar/receber, cobranças de contratos, previsto × realizado) | ✅ funcionando e testada |
+| 4. Automações | ⏳ próxima (a fila de eventos já é gravada pelo CRM) |
 | 5. Agente de IA | ⏳ requer chave da API Claude |
 | 6. Deploy (Docker, backup) | ⏳ |
 
