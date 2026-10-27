@@ -33,3 +33,12 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 
 ## Próximo passo
 Etapa 4, automações: A1–A7 (gatilho → condição → ação, follow-up com parada, webhooks HMAC, origens de captação), consumindo a fila `evento`.
+
+## Ambiente de teste publicado (27/10/2026)
+- URL: https://recepcao-ia-teste.vercel.app (Vercel, time `larc21`, projeto `recepcao-ia-teste`), banco Supabase `recepcao-ia-teste` (sa-east-1).
+- Migrações 0000–0003 aplicadas via API do Supabase. Schema conferido idêntico ao local (hash de 220 itens).
+  **Atenção:** esse banco não tem a tabela de controle do Drizzle. Novas migrações ali devem ser aplicadas uma a uma, da mesma forma.
+- A aplicação usa o usuário de banco `app_crm` (só DML). `anon`/`authenticated` sem acesso às tabelas.
+- Verificado no link: `/saude` 200, `jornada-crm.cjs` 9/9, `jornada-financeiro.cjs` 6/6, pedido de outra origem 403, sem login 401, cabeçalhos de segurança presentes.
+- Limitações: TLS com o banco sem verificação de certificado (`uselibpqcompat` + `sslmode=require`), função em iad1 e banco em sa-east-1 (latência), sem backup. Só dados fictícios.
+- Pendente: atualizar drizzle-orm (≥0.45.2) e zod (alertas de segurança high, baixa exposição no uso atual).
