@@ -64,3 +64,7 @@ Etapa 5, agente de IA (I1–I8). Bloqueio: precisa da `ANTHROPIC_API_KEY` (custo
   motivo (opcional: cancelar cobranças futuras), saúde financeira por contrato, histórico e indicadores no topo.
 - Migrações 0005 (versão, motivo, data de cancelamento, observações) e 0006 (CHECK de situação e vigência, com verificação prévia).
 - Verificado: `npm test` 43/43. E2E local: contratos 7/7, CRM 9/9, financeiro e automações OK.
+- Ambiente de teste: migrações 0005 e 0006 aplicadas, deploy feito. A jornada de contratos falhou no link real no passo
+  "cancelar" (passou local): condição de corrida. A ação seguinte saía com a versão antiga antes do recarregamento, em rede lenta.
+  Corrigido (o detalhe aplica a versão devolvida na hora e bloqueia ações enquanto recarrega). Mesma correção na tela da oportunidade.
+  Depois da correção: contratos 2/2 rodadas no link. CRM, financeiro e automações OK no link.

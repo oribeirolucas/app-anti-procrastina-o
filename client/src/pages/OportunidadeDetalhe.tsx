@@ -46,8 +46,10 @@ export default function OportunidadeDetalhe() {
     if (q.data) setF({ valor: q.data.valor.replace(".", ","), previsaoFechamento: q.data.previsaoFechamento ?? "", responsavelId: q.data.responsavelId ?? "" });
   }, [q.data]);
   const invalidar = () => { utils.pipeline.invalidate(); utils.relatorios.invalidate(); };
-  const atualizar = trpc.pipeline.atualizarOportunidade.useMutation({ onSuccess: () => { invalidar(); avisar("Alterações salvas."); } });
-  const mover = trpc.pipeline.moverEtapa.useMutation({ onSuccess: () => { invalidar(); setEtapaAlvo(""); setMotivo(""); avisar("Etapa atualizada."); } });
+  // Aplica a versão devolvida na hora: uma segunda ação antes do recarregamento não pode ir com versão antiga
+  const aplicar = (o: { versao: number; etapaId: string; situacao: string }) => utils.pipeline.oportunidade.setData({ id }, (v) => (v ? { ...v, versao: o.versao, etapaId: o.etapaId, situacao: o.situacao } : v));
+  const atualizar = trpc.pipeline.atualizarOportunidade.useMutation({ onSuccess: (o) => { aplicar(o); invalidar(); avisar("Alterações salvas."); } });
+  const mover = trpc.pipeline.moverEtapa.useMutation({ onSuccess: (o) => { aplicar(o); invalidar(); setEtapaAlvo(""); setMotivo(""); avisar("Etapa atualizada."); } });
   const arquivar = trpc.pipeline.arquivarOportunidade.useMutation({ onSuccess: (o) => { invalidar(); avisar(o.arquivadoEm ? "Oportunidade arquivada." : "Oportunidade reativada."); if (o.arquivadoEm) nav("/pipeline"); } });
 
   if (q.isLoading) return <Carregando />;
