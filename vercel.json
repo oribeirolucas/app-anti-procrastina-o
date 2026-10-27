@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd server && npm ci && cd ../client && npm ci",
+  "installCommand": "cd server && npm ci --include=dev && cd ../client && npm ci --include=dev",
   "buildCommand": "cd client && npm run build",
   "outputDirectory": "client/dist",
   "functions": { "api/index.ts": { "includeFiles": "server/src/**" } },
