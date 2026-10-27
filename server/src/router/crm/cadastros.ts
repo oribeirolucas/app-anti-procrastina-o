@@ -43,7 +43,7 @@ const versaoInput = z.number().int().min(1);
 
 export const cadastrosRouter = router({
   empresas: comPermissao("crm:ler")
-    .input(busca.extend({ segmento: z.string().optional() }).default({}))
+    .input(busca.extend({ segmento: z.string().optional() }).prefault({}))
     .query(async ({ input }) => {
       const filtros: SQL[] = [input.arquivados ? isNotNull(empresa.arquivadoEm) : isNull(empresa.arquivadoEm)];
       if (input.busca) {
@@ -136,7 +136,7 @@ export const cadastrosRouter = router({
     ),
 
   contatos: comPermissao("crm:ler")
-    .input(busca.extend({ empresaId: z.string().uuid().optional() }).default({}))
+    .input(busca.extend({ empresaId: z.string().uuid().optional() }).prefault({}))
     .query(async ({ input }) => {
       const filtros: SQL[] = [input.arquivados ? isNotNull(contato.arquivadoEm) : isNull(contato.arquivadoEm)];
       if (input.busca) {

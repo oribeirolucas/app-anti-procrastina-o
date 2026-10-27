@@ -108,7 +108,7 @@ export const financeiroRouter = router({
     }),
 
   lancamentos: comPermissao("financeiro:ler")
-    .input(filtroLancamentos.default({}))
+    .input(filtroLancamentos.prefault({}))
     .query(async ({ input }) => {
       const where = and(...(await montarFiltros(input)));
       const [linhas, [tot]] = await Promise.all([

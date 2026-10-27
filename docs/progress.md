@@ -41,4 +41,4 @@ Etapa 4, automações: A1–A7 (gatilho → condição → ação, follow-up com
 - A aplicação usa o usuário de banco `app_crm` (só DML). `anon`/`authenticated` sem acesso às tabelas.
 - Verificado no link: `/saude` 200, `jornada-crm.cjs` 9/9, `jornada-financeiro.cjs` 6/6, pedido de outra origem 403, sem login 401, cabeçalhos de segurança presentes.
 - Limitações: TLS com o banco sem verificação de certificado (`uselibpqcompat` + `sslmode=require`), função em iad1 e banco em sa-east-1 (latência), sem backup. Só dados fictícios.
-- Pendente: atualizar drizzle-orm (≥0.45.2) e zod (alertas de segurança high, baixa exposição no uso atual).
+- Resolvido em 27/10: drizzle-orm 0.45.4, drizzle-kit 0.31.11, zod 4.6.7 (`npm audit --omit=dev`: 0 vulnerabilidades).

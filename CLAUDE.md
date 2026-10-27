@@ -41,3 +41,4 @@ Plataforma interna da Recepção IA (CRM, financeiro, automações, agente de IA
 
 ## Arquitetura
 Ver `ARCHITECTURE.md`. Indicadores: `docs/INDICADORES.md`. Operação/diagnóstico: `docs/OPERACAO.md`.
+- **Zod 4**: em objetos com campos que têm padrão, use `.prefault({})`, não `.default({})` (no v4 o `.default` não aplica os padrões internos).

@@ -80,7 +80,7 @@ export const adminRouter = router({
   matrizPermissoes: comPermissao("usuarios:gerir").query(() => PERMISSOES),
 
   auditoria: comPermissao("auditoria:ver")
-    .input(z.object({ limite: z.number().int().min(1).max(500).default(100) }).default({}))
+    .input(z.object({ limite: z.number().int().min(1).max(500).default(100) }).prefault({}))
     .query(({ input }) =>
       db
         .select({ id: auditoria.id, acao: auditoria.acao, entidade: auditoria.entidade, entidadeId: auditoria.entidadeId, detalhes: auditoria.detalhes, criadoEm: auditoria.criadoEm, usuario: usuario.nome })

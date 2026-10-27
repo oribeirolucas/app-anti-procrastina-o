@@ -73,7 +73,7 @@ export const pipelineRouter = router({
       situacao: z.enum(["aberta", "ganha", "perdida"]).optional(),
       origem: z.string().max(60).optional(),
       arquivadas: z.boolean().default(false),
-    }).default({}))
+    }).prefault({}))
     .query(({ input }) => {
       const f: SQL[] = [input.arquivadas ? isNotNull(oportunidade.arquivadoEm) : isNull(oportunidade.arquivadoEm)];
       if (input.busca) f.push(or(ilike(oportunidade.titulo, `%${input.busca}%`), ilike(empresa.nome, `%${input.busca}%`))!);
@@ -239,7 +239,7 @@ export const pipelineRouter = router({
     }),
 
   tarefas: comPermissao("crm:ler")
-    .input(z.object({ escopo: z.enum(["minhas", "todas"]).default("minhas"), situacao: z.enum(["pendentes", "atrasadas", "concluidas"]).default("pendentes") }).default({}))
+    .input(z.object({ escopo: z.enum(["minhas", "todas"]).default("minhas"), situacao: z.enum(["pendentes", "atrasadas", "concluidas"]).default("pendentes") }).prefault({}))
     .query(({ ctx, input }) => {
       const f: SQL[] = [];
       if (input.escopo === "minhas") f.push(eq(tarefa.responsavelId, ctx.usuario.id));
@@ -281,7 +281,7 @@ export const pipelineRouter = router({
     }),
 
   contratos: comPermissao("crm:ler")
-    .input(z.object({ vencendoEmDias: z.number().int().min(1).max(365).optional() }).default({}))
+    .input(z.object({ vencendoEmDias: z.number().int().min(1).max(365).optional() }).prefault({}))
     .query(({ input }) => {
       const f: SQL[] = [];
       if (input.vencendoEmDias) {
