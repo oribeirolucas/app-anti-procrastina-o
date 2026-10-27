@@ -8,7 +8,7 @@ const passo = async (nome, fn) => { await fn(); console.log("✓", nome); };
 
 (async () => {
   const nav = await chromium.launch();
-  const p = await nav.newPage({ viewport: { width: 1280, height: 900 } });
+  const p = (globalThis.__pagina = await nav.newPage({ viewport: { width: 1280, height: 900 } }));
   const errosJs = [];
   p.on("pageerror", (e) => errosJs.push(e.message));
   p.setDefaultTimeout(15000);
@@ -71,7 +71,8 @@ const passo = async (nome, fn) => { await fn(); console.log("✓", nome); };
     await p.fill('textarea[placeholder="O que aconteceu?"]', "Respondeu no WhatsApp");
     await p.check("text=O contato respondeu");
     await p.click('button:has-text("Registrar")');
-    await p.waitForSelector("text=contato respondeu");
+    await p.waitForSelector("text=Interação registrada.");
+    await p.waitForSelector('section:has(h3:has-text("Follow-up")) li:has-text("contato respondeu")');
   });
 
   await passo("formulário público recebe lead e cria oportunidade", async () => {
@@ -98,4 +99,6 @@ const passo = async (nome, fn) => { await fn(); console.log("✓", nome); };
   if (errosJs.length) throw new Error("Erros JS: " + errosJs.join(" | "));
   await nav.close();
   console.log("OK");
-})().catch((e) => { console.error("FALHA:", e.message.split("\n")[0]); process.exit(1); });
+})().catch(async (e) => {
+  // Captura da tela no momento da falha (diagnóstico)
+  if (process.env.FALHA_PNG && globalThis.__pagina) await globalThis.__pagina.screenshot({ path: process.env.FALHA_PNG, fullPage: true }).catch(() => {}); console.error("FALHA:", e.message.split("\n")[0]); process.exit(1); });

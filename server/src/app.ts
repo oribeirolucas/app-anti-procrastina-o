@@ -74,6 +74,9 @@ export async function tratarRequisicao(req: http.IncomingMessage, res: http.Serv
         return;
       }
       if (url.pathname.startsWith("/trpc/")) {
+        // Somente desenvolvimento: simula rede lenta para reproduzir condições de corrida da interface
+        const retardo = !env.producao ? Number(process.env.RETARDO_MS ?? 0) : 0;
+        if (retardo > 0) await new Promise((r) => setTimeout(r, retardo));
         if (!origemValida(req)) { res.writeHead(403).end("Origem não permitida"); return; }
         return trpc(req, res);
       }

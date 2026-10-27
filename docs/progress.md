@@ -68,3 +68,6 @@ Etapa 5, agente de IA (I1–I8). Bloqueio: precisa da `ANTHROPIC_API_KEY` (custo
   "cancelar" (passou local): condição de corrida. A ação seguinte saía com a versão antiga antes do recarregamento, em rede lenta.
   Corrigido (o detalhe aplica a versão devolvida na hora e bloqueia ações enquanto recarrega). Mesma correção na tela da oportunidade.
   Depois da correção: contratos 2/2 rodadas no link. CRM, financeiro e automações OK no link.
+- Intermitência das jornadas no link investigada até a causa (27/10): não era o sistema. O teste esperava o texto digitado,
+  que o Playwright encontrava no próprio campo, e recarregava a página com o envio ainda em andamento. Reproduzido localmente com
+  `RETARDO_MS=700` (4/4 falhas) e corrigido nos testes (CRM e automações). Depois: 9/9 com rede lenta simulada e 8/8 no link.

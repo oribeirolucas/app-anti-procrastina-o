@@ -10,7 +10,7 @@ const passo = async (nome, fn) => { await fn(); passos.push(nome); console.log("
 
 (async () => {
   const navegador = await chromium.launch();
-  const p = await navegador.newPage({ viewport: { width: 1280, height: 800 } });
+  const p = (globalThis.__pagina = await navegador.newPage({ viewport: { width: 1280, height: 800 } }));
   const errosJs = [];
   p.on("pageerror", (e) => errosJs.push(e.message));
   p.setDefaultTimeout(10000);
@@ -65,9 +65,12 @@ const passo = async (nome, fn) => { await fn(); passos.push(nome); console.log("
   await passo("registrar interação e consultar histórico após recarregar", async () => {
     await p.fill('textarea[placeholder="O que aconteceu?"]', `[E2E] ligação ${SUFIXO}`);
     await p.click('button:has-text("Registrar")');
-    await p.waitForSelector(`text=[E2E] ligação ${SUFIXO}`);
+    // Espera a confirmação do servidor e o item no histórico (não o texto no próprio campo),
+    // senão o recarregamento abaixo cancela o envio ainda em andamento em rede lenta.
+    await p.waitForSelector("text=Interação registrada.");
+    await p.waitForSelector(`ol li:has-text("[E2E] ligação ${SUFIXO}")`);
     await p.reload();
-    await p.waitForSelector(`text=[E2E] ligação ${SUFIXO}`);
+    await p.waitForSelector(`ol li:has-text("[E2E] ligação ${SUFIXO}")`);
     await p.waitForSelector("text=Oportunidade criada na etapa");
   });
   await passo("celular sem rolagem horizontal da página", async () => {
@@ -81,4 +84,6 @@ const passo = async (nome, fn) => { await fn(); passos.push(nome); console.log("
   if (errosJs.length) throw new Error("Erros JS: " + errosJs.join(" | "));
   await navegador.close();
   console.log(`OK: ${passos.length} passos`);
-})().catch((e) => { console.error("FALHA:", e.message); process.exit(1); });
+})().catch(async (e) => {
+  // Captura da tela no momento da falha (diagnóstico)
+  if (process.env.FALHA_PNG && globalThis.__pagina) await globalThis.__pagina.screenshot({ path: process.env.FALHA_PNG, fullPage: true }).catch(() => {}); console.error("FALHA:", e.message); process.exit(1); });

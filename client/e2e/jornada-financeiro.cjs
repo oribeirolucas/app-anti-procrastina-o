@@ -16,7 +16,7 @@ async function entrar(p, email, senha) {
 
 (async () => {
   const nav = await chromium.launch();
-  const p = await nav.newPage({ viewport: { width: 1280, height: 900 } });
+  const p = (globalThis.__pagina = await nav.newPage({ viewport: { width: 1280, height: 900 } }));
   const errosJs = [];
   p.on("pageerror", (e) => errosJs.push(e.message));
   p.setDefaultTimeout(10000);
@@ -79,4 +79,6 @@ async function entrar(p, email, senha) {
   if (errosJs.length) throw new Error("Erros JS: " + errosJs.join(" | "));
   await nav.close();
   console.log("OK");
-})().catch((e) => { console.error("FALHA:", e.message); process.exit(1); });
+})().catch(async (e) => {
+  // Captura da tela no momento da falha (diagnóstico)
+  if (process.env.FALHA_PNG && globalThis.__pagina) await globalThis.__pagina.screenshot({ path: process.env.FALHA_PNG, fullPage: true }).catch(() => {}); console.error("FALHA:", e.message); process.exit(1); });
