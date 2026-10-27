@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd server && npm ci && cd ../client && npm ci",
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
+  "functions": { "api/index.ts": { "includeFiles": "server/src/**" } },
+  "rewrites": [
+    { "source": "/trpc/:path*", "destination": "/api/index" },
+    { "source": "/saude", "destination": "/api/index" },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}

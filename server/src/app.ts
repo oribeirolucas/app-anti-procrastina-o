@@ -35,8 +35,9 @@ function origemValida(req: http.IncomingMessage): boolean {
   return origem === env.origemApp || (host !== undefined && new URL(origem).host === host);
 }
 
-export function criarServidor() {
-  return http.createServer(async (req, res) => {
+// Tratador único de requisições: usado pelo servidor Node (VPS/Docker) e pela função serverless (Vercel).
+export async function tratarRequisicao(req: http.IncomingMessage, res: http.ServerResponse) {
+  {
     cabecalhosSeguranca(res);
     // Identificador da requisição: devolvido ao cliente e presente em todos os logs dela
     const reqId = randomUUID();
@@ -72,5 +73,9 @@ export function criarServidor() {
       log("erro", "http.erro", { reqId, rota: url.pathname, erro: String(e) });
       if (!res.headersSent) res.writeHead(500).end("Erro interno");
     }
-  });
+  }
+}
+
+export function criarServidor() {
+  return http.createServer(tratarRequisicao);
 }
