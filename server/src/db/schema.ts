@@ -222,10 +222,19 @@ export const contrato = pgTable(
     fim: date("fim"), // vencimento/renovação
     diaVencimento: integer("dia_vencimento").notNull().default(10),
     situacao: varchar("situacao", { length: 12 }).notNull().default("ativo"), // ativo | suspenso | cancelado
+    // Motivo da última suspensão/cancelamento e data do cancelamento (cancelado é definitivo)
+    motivoSituacao: varchar("motivo_situacao", { length: 200 }),
+    canceladoEm: timestamp("cancelado_em", { withTimezone: true }),
+    observacoes: text("observacoes"),
+    versao: versao(),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
-  (t) => [index("contrato_fim_idx").on(t.fim)],
+  (t) => [
+    index("contrato_fim_idx").on(t.fim),
+    check("contrato_situacao_ck", sql`${t.situacao} in ('ativo','suspenso','cancelado')`),
+    check("contrato_vigencia_ck", sql`${t.fim} is null or ${t.fim} >= ${t.inicio}`),
+  ],
 );
 
 // ───────────────────────── Eventos (fila para automações) ─────────────────────────

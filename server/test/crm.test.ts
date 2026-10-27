@@ -63,11 +63,11 @@ describe("fluxo comercial completo", () => {
     await op.pipeline.moverEtapa({ id: o2.id, etapaId: perdida.id, versao: o2.versao, motivoPerda: "Preço" });
 
     // Operador não registra contrato; gestor sim
-    await expect(op.pipeline.salvarContrato({ empresaId: emp.id, plano: "Pro", valorMensal: "597", inicio: "2026-10-01", diaVencimento: 10 })).rejects.toThrow("permissão");
+    await expect(op.contratos.criar({ empresaId: emp.id, plano: "Pro", valorMensal: "597", inicio: "2026-10-01", diaVencimento: 10 })).rejects.toThrow("permissão");
     const hoje = new Date();
     const em20 = new Date(hoje.getTime() + 20 * 86400_000).toISOString().slice(0, 10);
-    await gestor.pipeline.salvarContrato({ empresaId: emp.id, oportunidadeId: o.id, plano: "Pro", valorMensal: "597", inicio: hoje.toISOString().slice(0, 10), fim: em20, diaVencimento: 10 });
-    const vencendo = await op.pipeline.contratos({ vencendoEmDias: 30 });
+    await gestor.contratos.criar({ empresaId: emp.id, oportunidadeId: o.id, plano: "Pro", valorMensal: "597", inicio: hoje.toISOString().slice(0, 10), fim: em20, diaVencimento: 10 });
+    const vencendo = await op.contratos.listar({ vencimento: "30" });
     expect(vencendo.some((c) => c.empresaId === emp.id)).toBe(true);
 
     const d = hoje.toISOString().slice(0, 10);

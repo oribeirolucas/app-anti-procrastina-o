@@ -34,6 +34,17 @@ erros e estados vazios tratados · testes pertinentes passando · nada simulado 
 - C7. Opt-out bloqueia follow-ups (consumido pelas automações) e é idempotente.
 - C8. Indicadores conforme `docs/INDICADORES.md`. Oportunidade nunca conta como receita.
 
+### Contratos (aba Contratos)
+- K1. Criar contrato pela própria aba (empresa obrigatória) ou com um clique a partir de venda ganha sem contrato (dados preenchidos).
+- K2. Editar plano, valores, datas e dia de cobrança, com concorrência otimista. Contrato cancelado não é editável.
+- K3. Renovar por N meses a partir do fim atual (ou de hoje, se vencido), com reajuste opcional da mensalidade. Sem fim, não renova.
+- K4. Suspender (motivo obrigatório, para de gerar cobranças) ↔ reativar. Cancelar é definitivo, com motivo, e opcionalmente cancela as
+  cobranças futuras pendentes. As cobranças já vencidas continuam em aberto.
+- K5. Cada contrato mostra faturado, recebido, em atraso e próxima cobrança, e lista suas cobranças e o histórico de alterações.
+- K6. Indicadores: receita mensal ativa, vencendo em 30 dias (e vencidos), inadimplência, cancelados no mês (e receita perdida),
+  vendas ganhas sem contrato.
+- K7. Filtros por empresa, situação e vencimento (30/60/90 dias, vencidos, sem fim).
+
 ### Financeiro (etapa 3)
 - R1. Lançamento de receita ou despesa com descrição, categoria, valor, competência (mês), vencimento e,
   ao baixar, data e valor efetivamente pagos/recebidos. Não há exclusão: cancelamento exige motivo e sai de todos os totais.

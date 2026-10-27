@@ -45,3 +45,14 @@ Cada número no painel é um link para a lista de lançamentos com os mesmos fil
 **Geração de cobranças (mês M):** para cada contrato `ativo` com início ≤ último dia de M e (sem fim ou fim ≥ dia 1 de M),
 cria a mensalidade (vencimento = dia de cobrança, limitado ao último dia do mês) e, se o início cai em M e o setup > 0,
 o setup. Os índices únicos `lanc_mensalidade_uq` (contrato + competência) e `lanc_setup_uq` (contrato) impedem duplicidade.
+
+## Contratos (aba Contratos)
+
+| Indicador | Fórmula |
+|---|---|
+| Receita mensal ativa | Σ `valor_mensal` dos contratos `ativo` |
+| Vencendo em 30 dias | contratos `ativo` com `fim` entre hoje e hoje + 30 (vencidos = `fim` < hoje) |
+| Inadimplência | Σ `valor` das cobranças de contrato `pendente` com vencimento antes de hoje |
+| Cancelados no mês | contratos com `cancelado_em` a partir do dia 1 do mês atual. Receita perdida = Σ `valor_mensal` deles |
+| Vendas sem contrato | oportunidades `ganha`, não arquivadas, sem contrato com `oportunidade_id` apontando para elas |
+| Por contrato | faturado = Σ cobranças não canceladas · recebido = Σ `valor_pago` pagas · em atraso = pendentes vencidas |

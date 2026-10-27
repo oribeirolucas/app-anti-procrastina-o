@@ -48,7 +48,7 @@ export default function EmpresaDetalhe() {
               <ul className="divide-y divide-slate-100 text-sm">{e.contratos.map((c) => (
                 <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>{c.plano} · {moeda(c.valorMensal)}/mês · {data(c.inicio)} → {data(c.fim)}</span>
-                  <span className="flex items-center gap-2"><Etiqueta valor={c.situacao} />{podeContrato && <button className="text-xs underline" onClick={() => { setContratoEdit(c); setModal("contrato"); }}>editar</button>}</span>
+                  <span className="flex items-center gap-2"><Etiqueta valor={c.situacao} />{podeContrato && c.situacao !== "cancelado" && <button className="text-xs underline" onClick={() => { setContratoEdit(c); setModal("contrato"); }}>editar</button>}<Link className="text-xs underline" to={`/contratos?situacao=todos&busca=${encodeURIComponent(e.nome)}`}>gerenciar</Link></span>
                 </li>
               ))}</ul>
             ) : <Vazio texto="Nenhum contrato." />}
@@ -70,7 +70,7 @@ export default function EmpresaDetalhe() {
       <FormContato aberto={modal === "contato"} aoFechar={() => setModal(null)} empresaId={id} />
       <FormOportunidade aberto={modal === "oportunidade"} aoFechar={() => setModal(null)} empresaId={id} />
       <FormTarefa aberto={modal === "tarefa"} aoFechar={() => setModal(null)} vinculo={{ empresaId: id }} />
-      {modal === "contrato" && <FormContrato aberto aoFechar={() => setModal(null)} empresaId={id} contrato={contratoEdit} oportunidades={e.oportunidades} />}
+      {modal === "contrato" && <FormContrato aoFechar={() => setModal(null)} empresaId={id} contrato={contratoEdit} />}
     </Pagina>
   );
 }

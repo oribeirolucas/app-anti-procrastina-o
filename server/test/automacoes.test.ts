@@ -173,7 +173,7 @@ describe("contrato vencendo (agendado)", () => {
     await g.automacoes.salvar({ dados: { nome: "Renovação 30d", gatilho: "contrato.vencendo", condicoes: { diasAntes: 30 }, acoes: [{ tipo: "notificar", titulo: "Renovar contrato de {empresa}", destino: "gestores" }] } });
     const e = await g.cadastros.criarEmpresa({ nome: "Clínica Renova", cidade: "Teste" });
     const fim = new Date(Date.now() + 30 * 86400_000).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-    await g.pipeline.salvarContrato({ empresaId: e.id, plano: "Pro", valorMensal: "597", inicio: "2025-01-01", fim, diaVencimento: 10 });
+    await g.contratos.criar({ empresaId: e.id, plano: "Pro", valorMensal: "597", inicio: "2025-01-01", fim, diaVencimento: 10 });
     await executarCiclo();
     await executarCiclo();
     const n = await db.select().from(notificacao).where(eq(notificacao.titulo, "Renovar contrato de Clínica Renova"));

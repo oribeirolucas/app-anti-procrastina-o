@@ -36,6 +36,20 @@
       "when": 1793121122887,
       "tag": "0004_automacoes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793123086606,
+      "tag": "0005_contratos_gestao",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793123097171,
+      "tag": "0006_contratos_restricoes",
+      "breakpoints": true
     }
   ]
 }

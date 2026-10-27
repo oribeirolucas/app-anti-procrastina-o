@@ -8,6 +8,7 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | CRM C1 | ✅ | `client/e2e/jornada-crm.cjs`: 9 passos no navegador, incluindo recarga e celular |
 | CRM C2–C7 | ✅ | `server/test/integridade.test.ts`, `server/test/crm.test.ts` |
 | CRM C8 | ✅ | `crm.test.ts` (indicadores), fórmulas em `docs/INDICADORES.md` |
+| Contratos K1–K7 | ✅ | `server/test/contratos.test.ts` (6 cenários) e `client/e2e/jornada-contratos.cjs` (7 passos, inclui celular) |
 | Financeiro R1–R7 | ✅ | `server/test/financeiro.test.ts` (7 cenários) e `client/e2e/jornada-financeiro.cjs` (6 passos no navegador) |
 | Automações A1–A7 | ✅ | `server/test/automacoes.test.ts` (10 cenários) e `client/e2e/jornada-automacoes.cjs` (7 passos) |
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
@@ -57,3 +58,9 @@ Etapa 5, agente de IA (I1–I8). Bloqueio: precisa da `ANTHROPIC_API_KEY` (custo
   Bug encontrado só na Vercel e corrigido: `/webhooks` e `/tarefas` não eram roteados para a função (respondiam 405).
   No link: `jornada-automacoes.cjs` 7/7, `jornada-financeiro.cjs` OK, `jornada-crm.cjs` OK em 2 de 3 execuções
   (a primeira terminou sem resultado visível; provável lentidão iad1↔sa-east, não reproduzida). Observar.
+
+## Aba Contratos funcional (27/10/2026)
+- Antes: lista somente leitura. Agora: criar pela aba e a partir de venda ganha, editar, renovar, suspender/reativar, cancelar com
+  motivo (opcional: cancelar cobranças futuras), saúde financeira por contrato, histórico e indicadores no topo.
+- Migrações 0005 (versão, motivo, data de cancelamento, observações) e 0006 (CHECK de situação e vigência, com verificação prévia).
+- Verificado: `npm test` 43/43. E2E local: contratos 7/7, CRM 9/9, financeiro e automações OK.

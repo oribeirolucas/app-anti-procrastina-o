@@ -33,9 +33,10 @@ describe("financeiro", () => {
   it("geração de cobranças: idempotente, respeita vigência, situação, setup e dia de cobrança", async () => {
     const g = await chamadorComo("gestor");
     const e = await g.cadastros.criarEmpresa({ nome: "Clínica Cobrança", cidade: "Teste" });
-    const ativo = await g.pipeline.salvarContrato({ empresaId: e.id, plano: "Pro", valorMensal: "597", valorSetup: "497", inicio: "2025-02-05", diaVencimento: 28 });
-    await g.pipeline.salvarContrato({ empresaId: e.id, plano: "Encerrado", valorMensal: "100", inicio: "2024-01-01", fim: "2025-01-31", diaVencimento: 10 });
-    await g.pipeline.salvarContrato({ empresaId: e.id, plano: "Suspenso", valorMensal: "200", inicio: "2024-01-01", diaVencimento: 10, situacao: "suspenso" });
+    const ativo = await g.contratos.criar({ empresaId: e.id, plano: "Pro", valorMensal: "597", valorSetup: "497", inicio: "2025-02-05", diaVencimento: 28 });
+    await g.contratos.criar({ empresaId: e.id, plano: "Encerrado", valorMensal: "100", inicio: "2024-01-01", fim: "2025-01-31", diaVencimento: 10 });
+    const susp = await g.contratos.criar({ empresaId: e.id, plano: "Suspenso", valorMensal: "200", inicio: "2024-01-01", diaVencimento: 10 });
+    await g.contratos.alterarSituacao({ id: susp.id, versao: susp.versao, situacao: "suspenso", motivo: "Pausa a pedido" });
 
     const fev = await g.financeiro.gerarCobrancas({ mes: "2025-02" });
     const nossos = (await g.financeiro.lancamentos({ empresaId: e.id, campoData: "competencia", de: "2025-02-01", ate: "2025-02-28" })).linhas;

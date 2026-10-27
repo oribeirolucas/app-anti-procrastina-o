@@ -9,7 +9,7 @@ export default function Painel() {
   const [ate, setAte] = useState(hojeISO());
   const ind = trpc.relatorios.indicadores.useQuery({ de, ate });
   const tarefas = trpc.pipeline.tarefas.useQuery({ escopo: "minhas", situacao: "pendentes" });
-  const vencendo = trpc.pipeline.contratos.useQuery({ vencendoEmDias: 30 });
+  const vencendo = trpc.contratos.listar.useQuery({ vencimento: "30" });
   const d = ind.data;
   const maxEtapa = Math.max(1, ...(d?.porEtapa.map((e) => Number(e.valor)) ?? [1]));
 

@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, gte, ilike, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../../db/index.js";
-import { contato, contrato, empresa, etapaPipeline, interacao, oportunidade, tarefa, usuario } from "../../db/schema.js";
+import { contato, empresa, etapaPipeline, interacao, oportunidade, tarefa, usuario } from "../../db/schema.js";
 import { auditar } from "../../lib/auditoria.js";
 import { normalizarValorBR } from "../../lib/dinheiro.js";
 import { emitirEvento } from "../../lib/eventos.js";
@@ -278,51 +278,5 @@ export const pipelineRouter = router({
       const [t] = await db.update(tarefa).set({ concluida: input.concluida, concluidaEm: input.concluida ? new Date() : null }).where(eq(tarefa.id, input.id)).returning();
       if (!t) throw new TRPCError({ code: "NOT_FOUND", message: "Tarefa não encontrada." });
       return t;
-    }),
-
-  contratos: comPermissao("crm:ler")
-    .input(z.object({ vencendoEmDias: z.number().int().min(1).max(365).optional() }).prefault({}))
-    .query(({ input }) => {
-      const f: SQL[] = [];
-      if (input.vencendoEmDias) {
-        f.push(isNotNull(contrato.fim), eq(contrato.situacao, "ativo"));
-        f.push(lte(contrato.fim, sql`(current_date + ${input.vencendoEmDias}::int)`), gte(contrato.fim, sql`current_date`));
-      }
-      return db
-        .select({ c: contrato, empresa: empresa.nome })
-        .from(contrato)
-        .innerJoin(empresa, eq(empresa.id, contrato.empresaId))
-        .where(f.length ? and(...f) : undefined)
-        .orderBy(sql`${contrato.fim} asc nulls last`)
-        .limit(500)
-        .then((r) => r.map((x) => ({ ...x.c, empresa: x.empresa })));
-    }),
-
-  salvarContrato: comPermissao("contratos:escrever")
-    .input(z.object({
-      id: z.string().uuid().optional(),
-      empresaId: z.string().uuid(),
-      oportunidadeId: z.string().uuid().optional().nullable(),
-      plano: z.string().trim().min(2).max(60),
-      valorMensal: valor,
-      valorSetup: valor.default("0"),
-      inicio: dataISO,
-      fim: dataISO.optional().nullable(),
-      diaVencimento: z.number().int().min(1).max(28),
-      situacao: z.enum(["ativo", "suspenso", "cancelado"]).default("ativo"),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      if (input.fim && input.fim < input.inicio) throw new TRPCError({ code: "BAD_REQUEST", message: "O fim do contrato precisa ser depois do início." });
-      const { id, ...campos } = input;
-      return db.transaction(async (tx) => {
-      const [c] = id
-        ? await tx.update(contrato).set({ ...campos, atualizadoEm: new Date() }).where(eq(contrato.id, id)).returning()
-        : await tx.insert(contrato).values(campos).returning();
-      if (!c) throw new TRPCError({ code: "NOT_FOUND", message: "Contrato não encontrado." });
-      await tx.insert(interacao).values({ tipo: "alteracao", descricao: `Contrato ${c.plano} ${id ? "atualizado" : "registrado"} (${c.situacao}).`, empresaId: c.empresaId, oportunidadeId: c.oportunidadeId, usuarioId: ctx.usuario.id });
-      await auditar(ctx.usuario.id, id ? "contrato.atualizar" : "contrato.criar", "contrato", c.id, { valorMensal: c.valorMensal, situacao: c.situacao }, tx);
-      if (!id) await emitirEvento("contrato.criado", { contratoId: c.id, empresaId: c.empresaId }, undefined, tx);
-      return c;
-      });
     }),
 });
