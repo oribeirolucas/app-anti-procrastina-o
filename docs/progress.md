@@ -53,3 +53,7 @@ Etapa 5, agente de IA (I1–I8). Bloqueio: precisa da `ANTHROPIC_API_KEY` (custo
 - Limitações: ações apenas internas (tarefa, aviso, follow-up), sem envio de WhatsApp ou e-mail. Na Vercel, os passos de follow-up
   vencidos rodam na próxima alteração feita por alguém ou pelo botão "Processar agora" (não há processo contínuo). Na VPS, a cada 30 s.
 - Pendente de decisão: indicador/gatilho "bola do nosso lado" e follow-up que muda conforme a resposta (perguntados ao responsável).
+- Ambiente de teste (27/10): migração 0004 aplicada no Supabase (schema idêntico, hash de 308 itens), `TRUST_PROXY=1` na Vercel.
+  Bug encontrado só na Vercel e corrigido: `/webhooks` e `/tarefas` não eram roteados para a função (respondiam 405).
+  No link: `jornada-automacoes.cjs` 7/7, `jornada-financeiro.cjs` OK, `jornada-crm.cjs` OK em 2 de 3 execuções
+  (a primeira terminou sem resultado visível; provável lentidão iad1↔sa-east, não reproduzida). Observar.
