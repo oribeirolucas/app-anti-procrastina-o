@@ -4,7 +4,7 @@ import { trpc } from "../lib/trpc";
 import { dataHora, moeda } from "../lib/formato";
 import { useAvisar } from "../lib/aviso";
 import { usePode } from "../lib/sessao";
-import { Botao, Campo, Carregando, Cartao, Erro, Etiqueta, Modal, Pagina, Selecao, Tabela, Vazio } from "../components/ui";
+import { AreaTexto, Botao, Campo, Carregando, Cartao, Erro, Etiqueta, Modal, Pagina, Selecao, Tabela, Vazio } from "../components/ui";
 
 type Perfil = "admin" | "gestor" | "operador";
 
@@ -151,8 +151,14 @@ function Configuracoes() {
   );
 }
 
-type Plano = { id: string; versao: number; nome: string; valorMensal: string; valorSetup: string; descricao: string | null; ativo: boolean; ordem: number };
-const vazioPlano = { nome: "", valorMensal: "", valorSetup: "0,00", descricao: "", ordem: "0", ativo: true };
+type Entregavel = { item: string; disponivel: boolean };
+type Plano = { id: string; versao: number; nome: string; valorMensal: string; valorSetup: string; descricao: string | null; promessa: string | null; publicoIdeal: string | null; franquiaConversas: number | null; entregaveis: Entregavel[]; ativo: boolean; ordem: number };
+const vazioPlano = { nome: "", valorMensal: "", valorSetup: "0,00", descricao: "", promessa: "", publicoIdeal: "", franquia: "", entregaveis: "", ordem: "0", ativo: true };
+// Entregas: uma por linha; "[em breve]" no início marca o que ainda não pode ser vendido
+const MARCA_BREVE = "[em breve]";
+const entregasParaTexto = (l: Entregavel[]) => l.map((e) => (e.disponivel ? e.item : `${MARCA_BREVE} ${e.item}`)).join("\n");
+const textoParaEntregas = (t: string): Entregavel[] =>
+  t.split("\n").map((x) => x.trim()).filter(Boolean).map((x) => (x.toLowerCase().startsWith(MARCA_BREVE) ? { item: x.slice(MARCA_BREVE.length).trim(), disponivel: false } : { item: x, disponivel: true }));
 
 function Planos() {
   const utils = trpc.useUtils();
@@ -165,33 +171,40 @@ function Planos() {
   const criar = trpc.planos.criar.useMutation({ onSuccess: ok("Plano criado.") });
   const atualizar = trpc.planos.atualizar.useMutation({ onSuccess: ok("Plano atualizado.") });
   const alternar = trpc.planos.atualizar.useMutation({ onSuccess: () => utils.planos.listar.invalidate() });
-  const abrir = (p: Plano) => { setEditando(p); setF({ nome: p.nome, valorMensal: p.valorMensal.replace(".", ","), valorSetup: p.valorSetup.replace(".", ","), descricao: p.descricao ?? "", ordem: String(p.ordem), ativo: p.ativo }); };
+  const abrir = (p: Plano) => {
+    setEditando(p);
+    setF({ nome: p.nome, valorMensal: p.valorMensal.replace(".", ","), valorSetup: p.valorSetup.replace(".", ","), descricao: p.descricao ?? "", promessa: p.promessa ?? "", publicoIdeal: p.publicoIdeal ?? "", franquia: p.franquiaConversas === null ? "" : String(p.franquiaConversas), entregaveis: entregasParaTexto(p.entregaveis), ordem: String(p.ordem), ativo: p.ativo });
+  };
   const erro = criar.error ?? atualizar.error;
   const campos = erro?.data?.zod?.fieldErrors as Record<string, string[]> | undefined;
   return (
     <Cartao titulo="Planos e preços" acoes={<Botao onClick={() => setEditando("novo")}>+ Plano</Botao>}>
-      <p className="mb-3 text-xs text-slate-500">Preço de tabela usado ao registrar um contrato. Mudar o preço aqui não altera contratos já firmados.</p>
+      <p className="mb-3 text-xs text-slate-500">Fonte única da oferta: os agentes de venda e o site (<code>/publico/oferta</code>) usam estas entregas. Itens "em breve" não são vendidos. Mudar o preço não altera contratos já firmados.</p>
       <Erro erro={q.error ?? alternar.error} tentar={() => q.refetch()} />
       {q.isLoading ? <Carregando /> : !q.data?.length ? <Vazio texto="Nenhum plano cadastrado. Cadastre o que você vende para agilizar os contratos." /> : (
-        <Tabela colunas={["Ordem", "Plano", "Mensalidade", "Setup", "Situação", ""]}>
+        <Tabela colunas={["Ordem", "Plano", "Mensalidade", "Setup", "Entregas", "Situação", ""]}>
           {q.data.map((p) => (
             <tr key={p.id} className={p.ativo ? "" : "text-slate-400"}>
               <td className="px-3 py-2">{p.ordem}</td>
-              <td className="px-3 py-2">{p.nome}{p.descricao && <div className="text-xs text-slate-500">{p.descricao}</div>}</td>
+              <td className="px-3 py-2">{p.nome}{p.promessa && <div className="text-xs text-slate-500">{p.promessa}</div>}</td>
               <td className="px-3 py-2">{moeda(p.valorMensal)}</td><td className="px-3 py-2">{moeda(p.valorSetup)}</td>
+              <td className="px-3 py-2 text-xs">{p.entregaveis.filter((e) => e.disponivel).length} disponíveis{p.entregaveis.some((e) => !e.disponivel) && <span className="text-amber-700"> · {p.entregaveis.filter((e) => !e.disponivel).length} em breve</span>}</td>
               <td className="px-3 py-2"><Etiqueta valor={p.ativo ? "ativo" : "inativo"} /></td>
               <td className="space-x-2 px-3 py-2 text-xs">
                 <button className="underline" onClick={() => abrir(p)}>editar</button>
-                <button className="underline" disabled={alternar.isPending} onClick={() => alternar.mutate({ ...p, descricao: p.descricao, ativo: !p.ativo })}>{p.ativo ? "desativar" : "reativar"}</button>
+                <button className="underline" disabled={alternar.isPending} onClick={() => alternar.mutate({ id: p.id, versao: p.versao, nome: p.nome, valorMensal: p.valorMensal, valorSetup: p.valorSetup, descricao: p.descricao, promessa: p.promessa, publicoIdeal: p.publicoIdeal, franquiaConversas: p.franquiaConversas, entregaveis: p.entregaveis, ordem: p.ordem, ativo: !p.ativo })}>{p.ativo ? "desativar" : "reativar"}</button>
               </td>
             </tr>
           ))}
         </Tabela>
       )}
-      <Modal titulo={editando === "novo" ? "Novo plano" : "Editar plano"} aberto={!!editando} aoFechar={fechar}>
+      <Modal titulo={editando === "novo" ? "Novo plano" : "Editar plano"} aberto={!!editando} aoFechar={fechar} largura="max-w-2xl">
         <form className="space-y-3" onSubmit={(e) => {
           e.preventDefault();
-          const dados = { nome: f.nome, valorMensal: f.valorMensal, valorSetup: f.valorSetup || "0", descricao: f.descricao || null, ordem: Number(f.ordem) || 0, ativo: f.ativo };
+          const dados = {
+            nome: f.nome, valorMensal: f.valorMensal, valorSetup: f.valorSetup || "0", descricao: f.descricao || null, ordem: Number(f.ordem) || 0, ativo: f.ativo,
+            promessa: f.promessa || null, publicoIdeal: f.publicoIdeal || null, franquiaConversas: f.franquia ? Number(f.franquia) : null, entregaveis: textoParaEntregas(f.entregaveis),
+          };
           if (editando && editando !== "novo") atualizar.mutate({ id: editando.id, versao: editando.versao, ...dados });
           else criar.mutate(dados);
         }}>
@@ -201,7 +214,13 @@ function Planos() {
             <Campo rotulo="Setup (R$)" inputMode="decimal" placeholder="0,00" value={f.valorSetup} onChange={(e) => setF({ ...f, valorSetup: e.target.value })} erro={campos?.valorSetup?.[0]} />
             <Campo rotulo="Ordem" type="number" min={0} max={999} value={f.ordem} onChange={(e) => setF({ ...f, ordem: e.target.value })} />
           </div>
-          <Campo rotulo="Descrição" maxLength={300} value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} placeholder="O que o plano inclui" />
+          <div className="grid gap-3 md:grid-cols-2">
+            <Campo rotulo="Promessa (o resultado, em uma frase)" maxLength={120} value={f.promessa} onChange={(e) => setF({ ...f, promessa: e.target.value })} placeholder="Ex.: Nenhum paciente sem resposta" />
+            <Campo rotulo="Para quem" maxLength={200} value={f.publicoIdeal} onChange={(e) => setF({ ...f, publicoIdeal: e.target.value })} placeholder="Ex.: 1 unidade, até 300 conversas/mês" />
+          </div>
+          <Campo rotulo="Franquia de conversas por mês" type="number" min={0} value={f.franquia} onChange={(e) => setF({ ...f, franquia: e.target.value })} />
+          <AreaTexto rotulo={`Entregas (uma por linha; comece com ${MARCA_BREVE} o que ainda não pode ser vendido)`} rows={8} value={f.entregaveis} onChange={(e) => setF({ ...f, entregaveis: e.target.value })} />
+          <Campo rotulo="Resumo (opcional)" maxLength={300} value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} />
           <Erro erro={erro} />
           <div className="flex justify-end gap-2"><Botao type="button" variante="secundario" onClick={fechar}>Cancelar</Botao><Botao carregando={criar.isPending || atualizar.isPending}>Salvar</Botao></div>
         </form>

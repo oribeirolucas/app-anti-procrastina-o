@@ -22,6 +22,10 @@ const dados = z.object({
   valorMensal: valor(1),
   valorSetup: valor(0).default("0"),
   descricao: z.string().trim().max(300).optional().nullable(),
+  promessa: z.string().trim().max(120).optional().nullable(),
+  publicoIdeal: z.string().trim().max(200).optional().nullable(),
+  franquiaConversas: z.number().int().min(0).max(1_000_000).optional().nullable(),
+  entregaveis: z.array(z.object({ item: z.string().trim().min(2).max(200), disponivel: z.boolean() })).max(30, "Máximo de 30 entregas por plano.").default([]),
   ativo: z.boolean().default(true),
   ordem: z.number().int().min(0).max(999).default(0),
 });

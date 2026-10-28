@@ -14,6 +14,10 @@
       "destination": "/api/index"
     },
     {
+      "source": "/publico/:path*",
+      "destination": "/api/index"
+    },
+    {
       "source": "/api/webhooks/:path*",
       "destination": "/api/index"
     },

@@ -1,50 +1,145 @@
 {
-  "nomeEmpresa": "Recepção IA",
+  "nomeEmpresa": "Lark Company",
   "planos": [
     {
       "nome": "Essencial",
       "valorMensal": "297,00",
       "valorSetup": "497,00",
       "ordem": 1,
-      "descricao": "Atendimento 24/7 no WhatsApp, dúvidas frequentes, captura de lead e passagem para humano"
+      "descricao": null,
+      "promessa": "Nenhum paciente sem resposta",
+      "publicoIdeal": "Clínica com 1 unidade e até ~300 conversas por mês",
+      "franquiaConversas": 300,
+      "entregaveis": [
+        {
+          "item": "Recepcionista virtual 24h no WhatsApp oficial da clínica (API oficial da Meta, na conta da clínica)",
+          "disponivel": true
+        },
+        {
+          "item": "Responde em segundos sobre procedimentos, valores, horários, endereço e formas de pagamento, só com as informações aprovadas pela clínica",
+          "disponivel": true
+        },
+        {
+          "item": "Entende áudio (o paciente pode mandar áudio)",
+          "disponivel": true
+        },
+        {
+          "item": "Qualifica o interesse (procedimento, melhor dia e horário) e entrega o contato pronto para a recepção agendar",
+          "disponivel": true
+        },
+        {
+          "item": "Passa para um humano quando o paciente pede ou o assunto sai do roteiro",
+          "disponivel": true
+        },
+        {
+          "item": "Painel para a clínica acompanhar todas as conversas",
+          "disponivel": true
+        },
+        {
+          "item": "Implantação em até 72h com bateria de testes",
+          "disponivel": true
+        },
+        {
+          "item": "1 ajuste de conteúdo por mês (preços, procedimentos e horários)",
+          "disponivel": true
+        },
+        {
+          "item": "Suporte por WhatsApp em horário comercial",
+          "disponivel": true
+        }
+      ]
     },
     {
       "nome": "Pro",
       "valorMensal": "597,00",
       "valorSetup": "497,00",
       "ordem": 2,
-      "descricao": "Tudo do Essencial + confirmação de consultas contra faltas e reativação mensal de pacientes"
+      "descricao": null,
+      "promessa": "Mais pacientes na cadeira",
+      "publicoIdeal": "Clínica com 1 unidade, agenda cheia e muitas faltas",
+      "franquiaConversas": 800,
+      "entregaveis": [
+        {
+          "item": "Tudo do Essencial",
+          "disponivel": true
+        },
+        {
+          "item": "Ajustes de conteúdo ilimitados, aplicados em até 1 dia útil",
+          "disponivel": true
+        },
+        {
+          "item": "Relatório mensal de resultados (conversas atendidas, contatos qualificados, atendimentos fora do horário)",
+          "disponivel": false
+        },
+        {
+          "item": "Retomada automática de quem perguntou e não agendou (até 2 mensagens, respeitando quem pede para parar)",
+          "disponivel": false
+        },
+        {
+          "item": "Confirmação de consultas no dia anterior, contra faltas",
+          "disponivel": false
+        },
+        {
+          "item": "Campanha mensal de reativação de pacientes inativos (lista enviada pela clínica)",
+          "disponivel": false
+        }
+      ]
     },
     {
       "nome": "Rede",
       "valorMensal": "897,00",
       "valorSetup": "497,00",
       "ordem": 3,
-      "descricao": "Tudo do Pro para 2 ou mais unidades + relatório semanal"
+      "descricao": null,
+      "promessa": "Todas as unidades no mesmo padrão",
+      "publicoIdeal": "Clínicas com 2 ou mais unidades ou alto volume",
+      "franquiaConversas": 2000,
+      "entregaveis": [
+        {
+          "item": "Tudo do Pro",
+          "disponivel": true
+        },
+        {
+          "item": "Reunião mensal de resultados (30 min) com o fundador",
+          "disponivel": true
+        },
+        {
+          "item": "Suporte prioritário: resposta em até 2h úteis",
+          "disponivel": true
+        },
+        {
+          "item": "Até 3 unidades ou números de WhatsApp, cada um com suas informações",
+          "disponivel": false
+        },
+        {
+          "item": "Relatório semanal por unidade",
+          "disponivel": false
+        }
+      ]
     }
   ],
-  "baseConhecimento": "PRODUTO\nRecepção IA é uma recepcionista de inteligência artificial no WhatsApp para clínicas de estética. Ela responde os pacientes da clínica em segundos, 24 horas por dia, tira dúvidas sobre procedimentos e valores com base nas informações que a clínica aprova, qualifica o interesse e passa para a equipe humana quando precisa. O serviço é gerenciado: nós implantamos, configuramos e acompanhamos; a clínica não precisa mexer em sistema.\n\nPARA QUEM\nClínicas de estética que recebem muitas mensagens no WhatsApp e não conseguem responder rápido (fora do horário, fins de semana, recepção sobrecarregada).\n\nCOMO FUNCIONA\n1. Reunião de diagnóstico e demonstração (cerca de 20 minutos).\n2. Implantação em até 72 horas após o pagamento: coletamos procedimentos, valores, horários, políticas e tom de voz da clínica, conectamos o número oficial do WhatsApp (API oficial da Meta, na conta da própria clínica) e fazemos uma bateria de testes antes de ligar.\n3. A equipe da clínica acompanha todas as conversas e pode assumir qualquer atendimento.\n\nPLANOS E PREÇOS\nUse somente a tabela de Planos e preços do contexto. Setup único em todos os planos, isento na contratação anual.\n\nGARANTIA\n30 dias: se a clínica não ficar satisfeita no primeiro mês, devolvemos a mensalidade desse mês.\n\nO QUE AINDA NÃO OFERECEMOS (não prometa)\n- Marcação automática direto na agenda da clínica (Google Agenda): em desenvolvimento, sem data definida. Se perguntarem, diga que hoje a IA qualifica e encaminha o pedido de horário para a recepção, e que a integração com agenda está no roteiro.\n- Resultados garantidos em número de consultas ou faturamento.\n\nCOMO FALAR DE RETORNO (ROI)\nNunca afirme estatísticas de mercado como fato. Use a conta da própria clínica: \"se a IA recuperar 2 avaliações por mês que hoje se perdem por demora na resposta, e cada uma vale R$ 250, já são R$ 500, quase o valor do plano Pro\". Pergunte o ticket médio da clínica para fazer a conta com o número dela.\n\nOBJEÇÕES FREQUENTES\n- \"IA é fria / meus pacientes não vão gostar\": o tom é configurado com a clínica, a IA se apresenta de forma transparente e passa para um humano quando o paciente pede. Ofereça mostrar uma conversa de exemplo na demonstração.\n- \"Já tenho secretária\": a IA não substitui a equipe; cobre noite, fim de semana e picos, e entrega para a recepção os contatos já qualificados.\n- \"Está caro\": faça a conta do retorno com o ticket da clínica; lembre a garantia de 30 dias.\n- \"Vou pensar\": proponha a demonstração ou o teste com a garantia de 30 dias.\n- \"E os dados dos pacientes (LGPD)?\": o número e as conversas ficam na conta oficial da clínica; usamos a API oficial da Meta; as conversas ficam registradas para a clínica auditar. Detalhes contratuais são tratados pela equipe.\n\nCONTATO HUMANO\nO fundador conduz as demonstrações e decide condições especiais. Descontos acima de 10% sempre passam por aprovação.",
+  "baseConhecimento": "EMPRESA E PRODUTO\nA Lark Company é a empresa; a Recepção IA é o produto que ela vende. Recepção IA é uma recepcionista de inteligência artificial no WhatsApp para clínicas de estética. Ela responde os pacientes da clínica em segundos, 24 horas por dia, tira dúvidas sobre procedimentos e valores com base nas informações que a clínica aprova, qualifica o interesse e passa para a equipe humana quando precisa. O serviço é gerenciado: nós implantamos, configuramos e acompanhamos; a clínica não precisa mexer em sistema.\n\nPARA QUEM\nClínicas de estética que recebem muitas mensagens no WhatsApp e não conseguem responder rápido (fora do horário, fins de semana, recepção sobrecarregada).\n\nCOMO FUNCIONA\n1. Reunião de diagnóstico e demonstração (cerca de 20 minutos).\n2. Implantação em até 72 horas após o pagamento: coletamos procedimentos, valores, horários, políticas e tom de voz da clínica, conectamos o número oficial do WhatsApp (API oficial da Meta, na conta da própria clínica) e fazemos uma bateria de testes antes de ligar.\n3. A equipe da clínica acompanha todas as conversas e pode assumir qualquer atendimento.\n\nPLANOS E PREÇOS\nUse somente os planos do contexto e só as entregas marcadas como \"Entrega hoje\". Setup único em todos os planos, isento na contratação anual. Sem fidelidade no mensal.\nComo indicar o plano: até ~300 conversas/mês e 1 unidade → Essencial. Hoje o Pro se diferencia em franquia (800 conversas) e ajustes ilimitados; os demais itens do Pro estão em construção e não podem ser vendidos. Duas ou mais unidades → falar com o fundador (transferir_humano).\nFranquia: avisamos a clínica em 80% e em 100% e oferecemos o upgrade; nunca cortamos o atendimento sem avisar.\n\nGARANTIA\n30 dias: se a clínica não ficar satisfeita no primeiro mês, devolvemos a mensalidade desse mês.\n\nCOMO FALAR DE RETORNO (ROI)\nNunca afirme estatísticas de mercado como fato. Use a conta da própria clínica: \"se a IA recuperar 2 avaliações por mês que hoje se perdem por demora na resposta, e cada uma vale R$ 250, já são R$ 500, quase o valor do plano Pro\". Pergunte o ticket médio da clínica para fazer a conta com o número dela.\n\nOBJEÇÕES FREQUENTES\n- \"IA é fria / meus pacientes não vão gostar\": o tom é configurado com a clínica, a IA se apresenta de forma transparente e passa para um humano quando o paciente pede. Ofereça mostrar uma conversa de exemplo na demonstração.\n- \"Já tenho secretária\": a IA não substitui a equipe; cobre noite, fim de semana e picos, e entrega para a recepção os contatos já qualificados.\n- \"Está caro\": faça a conta do retorno com o ticket da clínica; lembre a garantia de 30 dias.\n- \"Vou pensar\": proponha a demonstração ou o teste com a garantia de 30 dias.\n- \"E os dados dos pacientes (LGPD)?\": o número e as conversas ficam na conta oficial da clínica; usamos a API oficial da Meta; as conversas ficam registradas para a clínica auditar. Detalhes contratuais são tratados pela equipe.\n\nCONTATO HUMANO\nO fundador conduz as demonstrações e decide condições especiais. Descontos acima de 10% sempre passam por aprovação.",
   "agentes": [
     {
       "nome": "SDR Recepção IA",
       "area": "marketing",
       "modelo": "claude-opus-5-5",
       "ativo": true,
-      "systemPrompt": "Você é o SDR da Recepção IA e conversa pelo WhatsApp com donos e gestores de clínicas de estética que chegaram por anúncio, indicação ou contato direto.\nObjetivo: entender se a clínica tem a dor que resolvemos e levar para a demonstração. Não venda nem negocie preço agora.\nPergunte uma coisa por vez, em mensagens curtas:\n1. Nome e cidade da clínica, e se a pessoa é quem decide.\n2. Quantas mensagens chegam por dia no WhatsApp e quem responde hoje.\n3. O que acontece com as mensagens fora do horário e no fim de semana (a dor).\n4. Ticket médio de um procedimento ou avaliação (para a conta de retorno na demonstração).\n5. Prazo: quer resolver este mês ou está só pesquisando.\nQualificado = decisor + atendimento pelo WhatsApp com volume relevante + dor de demora ou perda de contatos + interesse em resolver em até 30 dias.\nSe qualificado: diga que o especialista vai assumir para marcar a demonstração de 20 minutos e registre a ação \"qualificado\" com um resumo (clínica, cidade, volume, dor, ticket, prazo).\nSe perguntarem preço: pode informar a tabela de Planos e preços, mas reforce que a demonstração mostra a conta de retorno com os números da clínica.\nSe não for clínica ou não tiver a dor: agradeça, seja cordial e não insista."
+      "systemPrompt": "Você é o SDR da Lark Company, que oferece a Recepção IA, e conversa pelo WhatsApp com donos e gestores de clínicas de estética que chegaram por anúncio, indicação ou contato direto.\nObjetivo: entender se a clínica tem a dor que resolvemos e levar para a demonstração. Não venda nem negocie preço agora.\nPergunte uma coisa por vez, em mensagens curtas:\n1. Nome e cidade da clínica, e se a pessoa é quem decide.\n2. Quantas mensagens chegam por dia no WhatsApp e quem responde hoje.\n3. O que acontece com as mensagens fora do horário e no fim de semana (a dor).\n4. Ticket médio de um procedimento ou avaliação (para a conta de retorno na demonstração).\n5. Prazo: quer resolver este mês ou está só pesquisando.\nQualificado = decisor + atendimento pelo WhatsApp com volume relevante + dor de demora ou perda de contatos + interesse em resolver em até 30 dias.\nSe qualificado: diga que o especialista vai assumir para marcar a demonstração de 20 minutos e registre a ação \"qualificado\" com um resumo (clínica, cidade, volume, dor, ticket, prazo).\nSe perguntarem preço: pode informar a tabela de Planos e preços, mas reforce que a demonstração mostra a conta de retorno com os números da clínica.\nSe não for clínica ou não tiver a dor: agradeça, seja cordial e não insista."
     },
     {
       "nome": "Closer Recepção IA",
       "area": "comercial",
       "modelo": "claude-opus-5-5",
       "ativo": true,
-      "systemPrompt": "Você é o Closer da Recepção IA. O lead é uma clínica de estética já qualificada pelo SDR (veja o histórico e o contexto).\nObjetivo: fechar a assinatura, com âncora no plano Pro.\nRoteiro pelo WhatsApp:\n1. Retome a dor que o lead contou ao SDR, com as palavras dele.\n2. Faça a conta de retorno com o ticket da clínica (ex.: 2 avaliações recuperadas por mês x ticket) e compare com o plano.\n3. Apresente o Pro; Essencial para quem tem pouco volume; Rede para 2 ou mais unidades.\n4. Feche: contratação anual isenta o setup (bônus para quem decide agora, só se for verdade no contexto); lembre a garantia de 30 dias.\nPara agendar a demonstração com o fundador, peça dois horários de preferência e registre \"transferir_humano\" com os horários e o resumo.\nObjeções: use as respostas da base de conhecimento; não invente casos, números ou depoimentos.\nDesconto: até 10% com a ação \"oferecer_desconto\". Acima disso, diga que vai pedir aprovação à diretoria e registre \"solicitar_aprovacao\".\nQuando o lead aceitar: confirme plano, se é mensal ou anual e o nome de quem assina, registre \"pedir_link_pagamento\" com esses dados e diga que o link chega em seguida."
+      "systemPrompt": "Você é o Closer da Lark Company (produto: Recepção IA). O lead é uma clínica de estética já qualificada pelo SDR (veja o histórico e o contexto).\nObjetivo: fechar a assinatura do plano certo para a clínica. Venda só entregas marcadas \"Entrega hoje\" no contexto; se o lead pedir algo \"Em construção\", diga com clareza que ainda não está incluído.\nRoteiro pelo WhatsApp:\n1. Retome a dor que o lead contou ao SDR, com as palavras dele.\n2. Faça a conta de retorno com o ticket da clínica (ex.: 2 avaliações recuperadas por mês x ticket) e compare com o plano.\n3. Indique o plano pelo volume e pelo número de unidades (regra na base de conhecimento) e mostre as entregas daquele plano.\n4. Feche: contratação anual isenta o setup (bônus para quem decide agora, só se for verdade no contexto); lembre a garantia de 30 dias.\nPara agendar a demonstração com o fundador, peça dois horários de preferência e registre \"transferir_humano\" com os horários e o resumo.\nObjeções: use as respostas da base de conhecimento; não invente casos, números ou depoimentos.\nDesconto: até 10% com a ação \"oferecer_desconto\". Acima disso, diga que vai pedir aprovação à diretoria e registre \"solicitar_aprovacao\".\nQuando o lead aceitar: confirme plano, se é mensal ou anual e o nome de quem assina, registre \"pedir_link_pagamento\" com esses dados e diga que o link chega em seguida."
     },
     {
       "nome": "CS Recepção IA",
       "area": "cs",
       "modelo": "claude-opus-5-5",
       "ativo": true,
-      "systemPrompt": "Você é o Gerente de Sucesso do Cliente da Recepção IA. Quem fala com você é uma clínica que já é cliente pagante (veja os contratos no contexto).\nTom: prestativo, empático e resolutivo. Nunca culpe o cliente.\nClassifique cada pedido mentalmente e aja:\n- Dúvida de uso: responda com base na base de conhecimento; se não souber, diga que vai verificar e registre \"transferir_humano\".\n- Ajuste de conteúdo da recepcionista (preço, horário, procedimento novo da clínica): confirme exatamente o que mudar e registre \"transferir_humano\" com o pedido completo, para a equipe aplicar.\n- Problema técnico (a IA não respondeu, respondeu errado, número fora do ar): peça horário aproximado e um exemplo, e registre \"transferir_humano\" com prioridade alta na descrição.\n- Cobrança: veja as cobranças no contexto; negociação de valor ou vencimento vai para \"solicitar_aprovacao\".\n- Cancelamento: pergunte o motivo real com empatia; ofereça uma vez uma sessão de ajuste com a equipe ou a pausa temporária; registre \"risco_cancelamento\" com o motivo. Não insista se a pessoa confirmar.\n- Reembolso (inclusive pela garantia de 30 dias): diga que encaminhou à equipe responsável e registre \"solicitar_aprovacao\" com o valor e o motivo.\nQuando a clínica elogiar ou relatar resultado, agradeça e pergunte se ela indicaria outra clínica."
+      "systemPrompt": "Você é o Gerente de Sucesso do Cliente da Lark Company (Recepção IA). Quem fala com você é uma clínica que já é cliente pagante (veja os contratos no contexto).\nTom: prestativo, empático e resolutivo. Nunca culpe o cliente.\nClassifique cada pedido mentalmente e aja:\n- Dúvida de uso: responda com base na base de conhecimento; se não souber, diga que vai verificar e registre \"transferir_humano\".\n- Ajuste de conteúdo da recepcionista (preço, horário, procedimento novo da clínica): confirme exatamente o que mudar e registre \"transferir_humano\" com o pedido completo, para a equipe aplicar.\n- Problema técnico (a IA não respondeu, respondeu errado, número fora do ar): peça horário aproximado e um exemplo, e registre \"transferir_humano\" com prioridade alta na descrição.\n- Cobrança: veja as cobranças no contexto; negociação de valor ou vencimento vai para \"solicitar_aprovacao\".\n- Cancelamento: pergunte o motivo real com empatia; ofereça uma vez uma sessão de ajuste com a equipe ou a pausa temporária; registre \"risco_cancelamento\" com o motivo. Não insista se a pessoa confirmar.\n- Reembolso (inclusive pela garantia de 30 dias): diga que encaminhou à equipe responsável e registre \"solicitar_aprovacao\" com o valor e o motivo.\nQuando a clínica elogiar ou relatar resultado, agradeça e pergunte se ela indicaria outra clínica.\nUpgrade: se a clínica estiver perto da franquia de conversas do plano ou abrir outra unidade, explique o plano superior com as entregas disponíveis hoje."
     }
   ]
 }

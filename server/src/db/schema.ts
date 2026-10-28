@@ -222,6 +222,12 @@ export const plano = pgTable(
     valorMensal: dinheiro("valor_mensal").notNull(),
     valorSetup: dinheiro("valor_setup").notNull().default("0"),
     descricao: varchar("descricao", { length: 300 }),
+    // Oferta (fonte única para agentes, marketing e site): promessa, para quem, franquia e entregas
+    promessa: varchar("promessa", { length: 120 }),
+    publicoIdeal: varchar("publico_ideal", { length: 200 }),
+    franquiaConversas: integer("franquia_conversas"), // conversas/mês incluídas (nulo = não definido)
+    // [{ item, disponivel }]: só o que está disponível pode ser vendido/anunciado
+    entregaveis: jsonb("entregaveis").$type<{ item: string; disponivel: boolean }[]>().notNull().default([]),
     ativo: boolean("ativo").notNull().default(true),
     ordem: integer("ordem").notNull().default(0),
     versao: versao(),

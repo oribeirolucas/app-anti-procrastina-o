@@ -14,6 +14,15 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## Oferta estruturada por plano (28/10/2026)
+- `empresa/OFERTA.md` define o que cada plano entrega: promessa, público, franquia, entregas e garantia. Marca **Lark Company** (empresa) e **Recepção IA** (produto).
+- Os planos ganharam promessa, público ideal, franquia e entregas com status disponível ou em breve (migração 0012).
+  - Os agentes recebem as entregas no contexto, com a ordem de vender só o disponível.
+  - `GET /publico/oferta` serve a mesma oferta ao site, sem login e sem dados internos.
+- Regra fixa nova: o agente não nega ser IA se perguntarem.
+- Verificado: `npm test` 66/66 (oferta no contexto, endpoint público e limite de entregas) e tela de Planos no navegador.
+- O Pro e o Rede ainda têm entregas "em breve" que precisam ser construídas para sustentar o preço (ordem em OFERTA.md).
+
 ## A empresa vende a Recepção IA (28/10/2026)
 - Decisão: a plataforma (white-label) é o CRM de gestão. A Recepção IA é a empresa que a opera e vende a recepcionista de IA para clínicas de estética.
 - Perfil versionado em `empresa/perfil-crm.json`: nome, planos Essencial, Pro e Rede, base de conhecimento e prompts do SDR, Closer e CS.

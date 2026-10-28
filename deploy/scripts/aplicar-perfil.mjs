@@ -31,8 +31,12 @@ await passo(`nome da empresa: ${perfil.nomeEmpresa}`, () => chamar("admin.salvar
 const planos = await chamar("planos.listar", { incluirInativos: true }, "GET");
 for (const p of perfil.planos) {
   const atual = planos.find((x) => x.nome.toLowerCase() === p.nome.toLowerCase());
-  const dados = { nome: p.nome, valorMensal: p.valorMensal, valorSetup: p.valorSetup, descricao: p.descricao ?? null, ordem: p.ordem ?? 0, ativo: true };
-  await passo(`plano ${p.nome} (${atual ? "atualizar" : "criar"}): R$ ${p.valorMensal}/mês, setup R$ ${p.valorSetup}`,
+  const dados = {
+    nome: p.nome, valorMensal: p.valorMensal, valorSetup: p.valorSetup, descricao: p.descricao ?? null, ordem: p.ordem ?? 0, ativo: true,
+    promessa: p.promessa ?? null, publicoIdeal: p.publicoIdeal ?? null, franquiaConversas: p.franquiaConversas ?? null, entregaveis: p.entregaveis ?? [],
+  };
+  const disp = (p.entregaveis ?? []).filter((e) => e.disponivel).length, breve = (p.entregaveis ?? []).length - disp;
+  await passo(`plano ${p.nome} (${atual ? "atualizar" : "criar"}): R$ ${p.valorMensal}/mês, setup R$ ${p.valorSetup}, ${disp} entregas disponíveis, ${breve} em breve`,
     () => (atual ? chamar("planos.atualizar", { ...dados, id: atual.id, versao: atual.versao }) : chamar("planos.criar", dados)));
 }
 

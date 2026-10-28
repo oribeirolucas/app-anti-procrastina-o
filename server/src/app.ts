@@ -10,6 +10,7 @@ import { pool } from "./db/index.js";
 import { log } from "./lib/log.js";
 import { rotaWebhooks } from "./webhooks/captacao.js";
 import { criarRotaWhatsApp } from "./webhooks/whatsapp.js";
+import { rotaPublica } from "./webhooks/publico.js";
 import { dispararAtendimento } from "./services/container.js";
 import { executarCiclo } from "./automacoes/motor.js";
 import { timingSafeEqual } from "node:crypto";
@@ -20,7 +21,7 @@ const PASTA_CLIENT = path.resolve(process.env.PASTA_CLIENT ?? "../client/dist");
 const TIPOS: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json" };
 
 export type Rota = (req: http.IncomingMessage, res: http.ServerResponse) => Promise<boolean>;
-const rotasExtras: Rota[] = [criarRotaWhatsApp(() => void dispararAtendimento())];
+const rotasExtras: Rota[] = [criarRotaWhatsApp(() => void dispararAtendimento()), rotaPublica];
 export const registrarRota = (r: Rota) => rotasExtras.push(r);
 
 function cabecalhosSeguranca(res: http.ServerResponse) {
@@ -49,7 +50,7 @@ export async function tratarRequisicao(req: http.IncomingMessage, res: http.Serv
     res.setHeader("x-request-id", reqId);
     const inicio = Date.now();
     const url = new URL(req.url ?? "/", "http://local");
-    if (url.pathname.startsWith("/trpc/") || url.pathname.startsWith("/webhooks/"))
+    if (url.pathname.startsWith("/trpc/") || url.pathname.startsWith("/webhooks/") || url.pathname.startsWith("/publico/"))
       res.on("finish", () => log(res.statusCode >= 500 ? "erro" : "info", "http", { reqId, metodo: req.method, rota: url.pathname, status: res.statusCode, ms: Date.now() - inicio }));
     try {
       if (url.pathname === "/saude") {

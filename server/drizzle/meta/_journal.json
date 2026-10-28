@@ -85,6 +85,13 @@
       "when": 1793198963201,
       "tag": "0011_transcricao_audio",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793202239125,
+      "tag": "0012_oferta_planos",
+      "breakpoints": true
     }
   ]
 }

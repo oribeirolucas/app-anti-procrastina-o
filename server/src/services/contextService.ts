@@ -5,6 +5,17 @@ import type { Turno } from "./llmService.js";
 
 export const LIMITE_HISTORICO = 15;
 
+export type PlanoOferta = {
+  nome: string; valorMensal: string; valorSetup: string; descricao: string | null;
+  promessa: string | null; publicoIdeal: string | null; franquiaConversas: number | null; entregaveis: { item: string; disponivel: boolean }[];
+};
+const colunasOferta = {
+  nome: plano.nome, valorMensal: plano.valorMensal, valorSetup: plano.valorSetup, descricao: plano.descricao,
+  promessa: plano.promessa, publicoIdeal: plano.publicoIdeal, franquiaConversas: plano.franquiaConversas, entregaveis: plano.entregaveis,
+};
+/** Planos ativos com a oferta completa (mesma fonte para agentes e site). */
+export const planosAtivos = () => db.select(colunasOferta).from(plano).where(eq(plano.ativo, true)).orderBy(plano.ordem);
+
 /** Dados do CRM que o roteador e o prompt usam. */
 export type ContextoCRM = {
   conversaId: string;
@@ -12,7 +23,7 @@ export type ContextoCRM = {
   oportunidade: { id: string; versao: number; titulo: string; etapa: string; etapaOrdem: number; valor: string; situacao: string } | null;
   contratosAtivos: { plano: string; valorMensal: string; inicio: string; fim: string | null }[];
   historicoCompras: { descricao: string; valor: string; situacao: string; vencimento: string }[];
-  planos: { nome: string; valorMensal: string; valorSetup: string; descricao: string | null }[];
+  planos: PlanoOferta[];
   baseConhecimento: string;
 };
 
@@ -35,7 +46,7 @@ export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM
     .leftJoin(contato, eq(contato.id, conversa.contatoId))
     .leftJoin(empresa, eq(empresa.id, contato.empresaId))
     .where(eq(conversa.id, conversaId));
-  const planos = await db.select({ nome: plano.nome, valorMensal: plano.valorMensal, valorSetup: plano.valorSetup, descricao: plano.descricao }).from(plano).where(eq(plano.ativo, true)).orderBy(plano.ordem);
+  const planos = await planosAtivos();
   const [base] = await db.select().from(configuracao).where(eq(configuracao.chave, "base_conhecimento"));
   const baseConhecimento = typeof base?.valor === "string" ? base.valor : "";
   if (!c?.contatoId) return { conversaId, contato: null, oportunidade: null, contratosAtivos: [], historicoCompras: [], planos, baseConhecimento };
@@ -85,7 +96,17 @@ export function formatarContexto(ctx: ContextoCRM, hoje: string): string {
   if (ctx.contratosAtivos.length) l.push("Contratos ativos: " + ctx.contratosAtivos.map((x) => `${x.plano} ${br(x.valorMensal)}/mês desde ${dataBR(x.inicio)}${x.fim ? ` até ${dataBR(x.fim)}` : ""}`).join("; "));
   else l.push("Contratos ativos: nenhum (não é cliente pagante).");
   if (ctx.historicoCompras.length) l.push("Últimas cobranças: " + ctx.historicoCompras.map((x) => `${x.descricao} ${br(x.valor)} venc. ${dataBR(x.vencimento)} (${x.situacao})`).join("; "));
-  if (ctx.planos.length) l.push("Planos e preços oficiais: " + ctx.planos.map((p) => `${p.nome}: ${br(p.valorMensal)}/mês, setup ${br(p.valorSetup)}${p.descricao ? ` (${p.descricao})` : ""}`).join("; "));
+  if (ctx.planos.length) {
+    l.push("Planos e preços oficiais (só ofereça o que está em \"Entrega hoje\"; o que está \"Em construção\" NÃO pode ser vendido nem prometido, e não informe data):");
+    for (const p of ctx.planos) {
+      const hoje = p.entregaveis.filter((e) => e.disponivel).map((e) => e.item);
+      const breve = p.entregaveis.filter((e) => !e.disponivel).map((e) => e.item);
+      l.push(`- ${p.nome}: ${br(p.valorMensal)}/mês, setup ${br(p.valorSetup)}${p.promessa ? ` · promessa: ${p.promessa}` : ""}${p.publicoIdeal ? ` · para: ${p.publicoIdeal}` : ""}${p.franquiaConversas ? ` · até ${p.franquiaConversas} conversas/mês` : ""}`);
+      if (hoje.length) l.push(`  Entrega hoje: ${hoje.join("; ")}`);
+      else if (p.descricao) l.push(`  Inclui: ${p.descricao}`);
+      if (breve.length) l.push(`  Em construção (não vender): ${breve.join("; ")}`);
+    }
+  }
   else l.push("Planos e preços oficiais: não cadastrados. Não informe valores; encaminhe para a equipe.");
   // Base de conhecimento no fim, separada dos dados do lead
   l.push(ctx.baseConhecimento.trim() ? `\nBase de conhecimento da empresa (oferta, políticas e respostas aprovadas):\n${ctx.baseConhecimento.trim()}` : "\nBase de conhecimento da empresa: vazia. Para perguntas sobre o produto, diga que vai confirmar com a equipe.");
