@@ -44,7 +44,7 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 Etapa 5, agente de IA (I1–I8). Bloqueio: precisa da `ANTHROPIC_API_KEY` (custo por uso). Sem a chave, é possível construir a base de conhecimento, os casos de transferência, as regras obrigatórias e a aprovação de propostas, deixando a chamada ao modelo para o fim.
 
 ## Ambiente de teste publicado (27/10/2026)
-- URL: https://recepcao-ia-teste.vercel.app (Vercel, time `larc21`, projeto `recepcao-ia-teste`), banco Supabase `recepcao-ia-teste` (sa-east-1).
+- URL: https://plataforma-comercial-demo.vercel.app (Vercel, time `larc21`, projeto `recepcao-ia-teste`), banco Supabase `recepcao-ia-teste` (sa-east-1).
 - Migrações 0000–0003 aplicadas via API do Supabase. Schema conferido idêntico ao local (hash de 220 itens).
   **Atenção:** esse banco não tem a tabela de controle do Drizzle. Novas migrações ali devem ser aplicadas uma a uma, da mesma forma.
 - A aplicação usa o usuário de banco `app_crm` (só DML). `anon`/`authenticated` sem acesso às tabelas.
