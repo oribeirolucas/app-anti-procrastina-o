@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { trpc } from "../lib/trpc";
-import { dataHora } from "../lib/formato";
+import { dataHora, moeda } from "../lib/formato";
+import { useAvisar } from "../lib/aviso";
 import { usePode } from "../lib/sessao";
-import { Botao, Campo, Carregando, Cartao, Erro, Etiqueta, Modal, Pagina, Selecao, Tabela } from "../components/ui";
+import { Botao, Campo, Carregando, Cartao, Erro, Etiqueta, Modal, Pagina, Selecao, Tabela, Vazio } from "../components/ui";
 
 type Perfil = "admin" | "gestor" | "operador";
 
@@ -127,8 +128,17 @@ function Configuracoes() {
   const salvar = trpc.admin.salvarConfiguracao.useMutation({ onSuccess: () => { utils.admin.configuracoes.invalidate(); utils.auth.eu.invalidate(); } });
   const atual = (q.data?.find((c) => c.chave === "fuso_horario")?.valor as string | undefined) ?? "America/Sao_Paulo";
   const [fuso, setFuso] = useState("");
+  const nomeAtual = (q.data?.find((c) => c.chave === "nome_empresa")?.valor as string | undefined) ?? "";
+  const [nome, setNome] = useState<string | null>(null);
+  const salvarNome = trpc.admin.salvarConfiguracao.useMutation({ onSuccess: () => { utils.admin.configuracoes.invalidate(); utils.auth.marca.invalidate(); setNome(null); } });
   return (
     <Cartao titulo="Configurações gerais">
+      <form className="mb-4 flex max-w-md items-end gap-2" onSubmit={(e) => { e.preventDefault(); salvarNome.mutate({ chave: "nome_empresa", valor: nome ?? nomeAtual }); }}>
+        <div className="flex-1"><Campo rotulo="Nome da empresa (aparece no login e no menu)" required maxLength={120} value={nome ?? nomeAtual} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Minha Empresa Ltda." /></div>
+        <Botao carregando={salvarNome.isPending}>Salvar</Botao>
+      </form>
+      <Erro erro={salvarNome.error} />
+      {salvarNome.isSuccess && <p className="mb-2 text-xs text-emerald-700">Nome salvo.</p>}
       <form className="flex max-w-md items-end gap-2" onSubmit={(e) => { e.preventDefault(); salvar.mutate({ chave: "fuso_horario", valor: fuso || atual }); }}>
         <Selecao rotulo="Fuso horário" value={fuso || atual} onChange={(e) => setFuso(e.target.value)}>
           {["America/Sao_Paulo", "America/Manaus", "America/Cuiaba", "America/Recife", "America/Fortaleza", "America/Belem", "America/Rio_Branco", "America/Noronha"].map((z) => <option key={z}>{z}</option>)}
@@ -141,10 +151,69 @@ function Configuracoes() {
   );
 }
 
+type Plano = { id: string; versao: number; nome: string; valorMensal: string; valorSetup: string; descricao: string | null; ativo: boolean; ordem: number };
+const vazioPlano = { nome: "", valorMensal: "", valorSetup: "0,00", descricao: "", ordem: "0", ativo: true };
+
+function Planos() {
+  const utils = trpc.useUtils();
+  const avisar = useAvisar();
+  const q = trpc.planos.listar.useQuery({ incluirInativos: true });
+  const [editando, setEditando] = useState<Plano | "novo" | null>(null);
+  const [f, setF] = useState(vazioPlano);
+  const fechar = () => { setEditando(null); setF(vazioPlano); };
+  const ok = (msg: string) => () => { utils.planos.listar.invalidate(); avisar(msg); fechar(); };
+  const criar = trpc.planos.criar.useMutation({ onSuccess: ok("Plano criado.") });
+  const atualizar = trpc.planos.atualizar.useMutation({ onSuccess: ok("Plano atualizado.") });
+  const alternar = trpc.planos.atualizar.useMutation({ onSuccess: () => utils.planos.listar.invalidate() });
+  const abrir = (p: Plano) => { setEditando(p); setF({ nome: p.nome, valorMensal: p.valorMensal.replace(".", ","), valorSetup: p.valorSetup.replace(".", ","), descricao: p.descricao ?? "", ordem: String(p.ordem), ativo: p.ativo }); };
+  const erro = criar.error ?? atualizar.error;
+  const campos = erro?.data?.zod?.fieldErrors as Record<string, string[]> | undefined;
+  return (
+    <Cartao titulo="Planos e preços" acoes={<Botao onClick={() => setEditando("novo")}>+ Plano</Botao>}>
+      <p className="mb-3 text-xs text-slate-500">Preço de tabela usado ao registrar um contrato. Mudar o preço aqui não altera contratos já firmados.</p>
+      <Erro erro={q.error ?? alternar.error} tentar={() => q.refetch()} />
+      {q.isLoading ? <Carregando /> : !q.data?.length ? <Vazio texto="Nenhum plano cadastrado. Cadastre o que você vende para agilizar os contratos." /> : (
+        <Tabela colunas={["Ordem", "Plano", "Mensalidade", "Setup", "Situação", ""]}>
+          {q.data.map((p) => (
+            <tr key={p.id} className={p.ativo ? "" : "text-slate-400"}>
+              <td className="px-3 py-2">{p.ordem}</td>
+              <td className="px-3 py-2">{p.nome}{p.descricao && <div className="text-xs text-slate-500">{p.descricao}</div>}</td>
+              <td className="px-3 py-2">{moeda(p.valorMensal)}</td><td className="px-3 py-2">{moeda(p.valorSetup)}</td>
+              <td className="px-3 py-2"><Etiqueta valor={p.ativo ? "ativo" : "inativo"} /></td>
+              <td className="space-x-2 px-3 py-2 text-xs">
+                <button className="underline" onClick={() => abrir(p)}>editar</button>
+                <button className="underline" disabled={alternar.isPending} onClick={() => alternar.mutate({ ...p, descricao: p.descricao, ativo: !p.ativo })}>{p.ativo ? "desativar" : "reativar"}</button>
+              </td>
+            </tr>
+          ))}
+        </Tabela>
+      )}
+      <Modal titulo={editando === "novo" ? "Novo plano" : "Editar plano"} aberto={!!editando} aoFechar={fechar}>
+        <form className="space-y-3" onSubmit={(e) => {
+          e.preventDefault();
+          const dados = { nome: f.nome, valorMensal: f.valorMensal, valorSetup: f.valorSetup || "0", descricao: f.descricao || null, ordem: Number(f.ordem) || 0, ativo: f.ativo };
+          if (editando && editando !== "novo") atualizar.mutate({ id: editando.id, versao: editando.versao, ...dados });
+          else criar.mutate(dados);
+        }}>
+          <Campo rotulo="Nome *" required maxLength={60} value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} erro={campos?.nome?.[0]} placeholder="Ex.: Plano Profissional" />
+          <div className="grid grid-cols-3 gap-3">
+            <Campo rotulo="Mensalidade (R$) *" required inputMode="decimal" placeholder="499,00" value={f.valorMensal} onChange={(e) => setF({ ...f, valorMensal: e.target.value })} erro={campos?.valorMensal?.[0]} />
+            <Campo rotulo="Setup (R$)" inputMode="decimal" placeholder="0,00" value={f.valorSetup} onChange={(e) => setF({ ...f, valorSetup: e.target.value })} erro={campos?.valorSetup?.[0]} />
+            <Campo rotulo="Ordem" type="number" min={0} max={999} value={f.ordem} onChange={(e) => setF({ ...f, ordem: e.target.value })} />
+          </div>
+          <Campo rotulo="Descrição" maxLength={300} value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} placeholder="O que o plano inclui" />
+          <Erro erro={erro} />
+          <div className="flex justify-end gap-2"><Botao type="button" variante="secundario" onClick={fechar}>Cancelar</Botao><Botao carregando={criar.isPending || atualizar.isPending}>Salvar</Botao></div>
+        </form>
+      </Modal>
+    </Cartao>
+  );
+}
+
 export default function Admin() {
   const gerirUsuarios = usePode("usuarios:gerir");
   const abas = [
-    ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }] : []),
+    ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }, { para: "/admin/planos", rotulo: "Planos e preços" }] : []),
     { para: "/admin/etapas", rotulo: "Pipeline" },
     { para: "/admin/auditoria", rotulo: "Auditoria" },
   ];
@@ -156,6 +225,7 @@ export default function Admin() {
       <Routes>
         {gerirUsuarios && <Route path="usuarios" element={<Usuarios />} />}
         {gerirUsuarios && <Route path="configuracoes" element={<Configuracoes />} />}
+        {gerirUsuarios && <Route path="planos" element={<Planos />} />}
         <Route path="etapas" element={<Etapas />} />
         <Route path="auditoria" element={<Auditoria />} />
         <Route path="*" element={<Navigate to={abas[0].para} replace />} />

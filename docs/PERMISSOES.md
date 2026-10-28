@@ -5,7 +5,7 @@ Fonte única: `server/src/auth/permissoes.ts`. A tela Administração → Usuár
 | Permissão | admin | gestor | operador | O que libera |
 |---|:-:|:-:|:-:|---|
 | usuarios:gerir | ✓ | | | criar/desativar usuários, mudar perfil, redefinir senha |
-| config:gerir | ✓ | | | fuso horário e configurações gerais |
+| config:gerir | ✓ | | | fuso horário, nome da empresa, catálogo de planos e preços |
 | auditoria:ver | ✓ | ✓ | | log de ações e menu Administração |
 | crm:ler / crm:escrever | ✓ | ✓ | ✓ | empresas, contatos, oportunidades, tarefas, interações |
 | crm:arquivar | ✓ | ✓ | | arquivar/reativar empresa, contato, oportunidade (não há exclusão física) |

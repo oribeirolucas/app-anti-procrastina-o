@@ -20,10 +20,7 @@ export function FormEmpresa({ aberto, aoFechar, aoSalvar }: { aberto: boolean; a
         <Campo rotulo="Nome *" required value={f.nome} onChange={set("nome")} erro={erroCampo(criar.error, "nome")} />
         <div className="grid grid-cols-2 gap-3">
           <Campo rotulo="CNPJ" value={f.documento} onChange={set("documento")} />
-          <Selecao rotulo="Segmento" value={f.segmento} onChange={set("segmento")}>
-            <option value="">—</option>
-            {["odontologia", "estetica", "fisioterapia", "psicologia", "medicina", "outro"].map((s) => <option key={s}>{s}</option>)}
-          </Selecao>
+          <Campo rotulo="Segmento" maxLength={80} placeholder="Ex.: varejo" value={f.segmento} onChange={set("segmento")} />
           <Campo rotulo="Cidade" value={f.cidade} onChange={set("cidade")} />
           <Campo rotulo="UF" maxLength={2} value={f.uf} onChange={set("uf")} />
           <Campo rotulo="Telefone" value={f.telefone} onChange={set("telefone")} />

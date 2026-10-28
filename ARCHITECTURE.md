@@ -1,6 +1,6 @@
 # Arquitetura
 
-Plataforma interna da Recepção IA: CRM comercial, agente de IA de atendimento, automações e
+Plataforma comercial white-label, uma instalação (servidor + banco) por cliente: CRM comercial, agente de IA de atendimento, automações e
 dashboard financeiro, compartilhando um único banco PostgreSQL.
 
 ## Decisões

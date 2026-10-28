@@ -7,9 +7,8 @@ import { AreaTexto, Botao, Campo, Erro, Modal, Selecao } from "./ui";
 type Contrato = { id: string; versao: number; plano: string; valorMensal: string; valorSetup: string; inicio: string; fim: string | null; diaVencimento: number; oportunidadeId: string | null; observacoes: string | null; empresaId: string };
 export type PreenchimentoContrato = { empresaId?: string | null; oportunidadeId?: string; valorMensal?: string; plano?: string };
 
-const PLANOS = ["Essencial", "Pro", "Rede", "Personalizado"];
-/** Mensalidade de tabela de cada plano; "Personalizado" mantém o valor digitado. */
-const PRECO_PLANO: Record<string, string> = { Essencial: "297,00", Pro: "597,00", Rede: "897,00" };
+const PERSONALIZADO = "Personalizado";
+const br = (v: string) => v.replace(".", ",");
 const somarAno = (d: string) => `${Number(d.slice(0, 4)) + 1}${d.slice(4)}`;
 
 /** Cria (com empresa fixa ou escolhida) ou edita um contrato. */
@@ -22,8 +21,8 @@ export function FormContrato({ aoFechar, empresaId, contrato, preencher }: { aoF
     return {
       empresaId: empresaFixa,
       oportunidadeId: contrato?.oportunidadeId ?? preencher?.oportunidadeId ?? "",
-      plano: contrato?.plano ?? preencher?.plano ?? "Pro",
-      valorMensal: (contrato?.valorMensal ?? preencher?.valorMensal ?? "597.00").replace(".", ","),
+      plano: contrato?.plano ?? preencher?.plano ?? "",
+      valorMensal: (contrato?.valorMensal ?? preencher?.valorMensal ?? "").replace(".", ","),
       valorSetup: (contrato?.valorSetup ?? "0").replace(".", ","),
       inicio,
       fim: contrato ? (contrato.fim ?? "") : somarAno(inicio),
@@ -31,6 +30,15 @@ export function FormContrato({ aoFechar, empresaId, contrato, preencher }: { aoF
       observacoes: contrato?.observacoes ?? "",
     };
   });
+  // Catálogo de planos (Admin → Planos e preços): escolher um preenche mensalidade e setup de tabela.
+  const planos = trpc.planos.listar.useQuery();
+  const nomes = [...(planos.data ?? []).map((p) => p.nome)];
+  if (f.plano && !nomes.includes(f.plano)) nomes.push(f.plano); // plano antigo, fora do catálogo
+  if (!nomes.includes(PERSONALIZADO)) nomes.push(PERSONALIZADO);
+  const escolherPlano = (nome: string) => {
+    const p = planos.data?.find((x) => x.nome === nome);
+    setF({ ...f, plano: nome, ...(p ? { valorMensal: br(p.valorMensal), valorSetup: br(p.valorSetup) } : {}) });
+  };
   const empresas = trpc.cadastros.empresas.useQuery({}, { enabled: !empresaFixa });
   const oportunidades = trpc.pipeline.oportunidades.useQuery({ situacao: "ganha" }, { enabled: !!f.empresaId });
   const ok = (msg: string) => () => { utils.contratos.invalidate(); utils.cadastros.empresa.invalidate(); utils.relatorios.invalidate(); avisar(msg); aoFechar(); };
@@ -55,17 +63,21 @@ export function FormContrato({ aoFechar, empresaId, contrato, preencher }: { aoF
           </Selecao>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <Selecao rotulo="Plano" value={PLANOS.includes(f.plano) ? f.plano : "Personalizado"} onChange={(e) => setF({ ...f, plano: e.target.value, valorMensal: PRECO_PLANO[e.target.value] ?? f.valorMensal })}>{PLANOS.map((p) => <option key={p}>{p}</option>)}</Selecao>
+          <Selecao rotulo="Plano *" required value={f.plano} onChange={(e) => escolherPlano(e.target.value)}>
+            <option value="">{planos.isLoading ? "Carregando…" : "Escolha…"}</option>
+            {nomes.map((p) => <option key={p}>{p}</option>)}
+          </Selecao>
           <Selecao rotulo="Venda de origem" value={f.oportunidadeId} onChange={set("oportunidadeId")}>
             <option value="">—</option>
             {oportunidades.data?.filter((o) => o.empresaId === f.empresaId || o.id === f.oportunidadeId).map((o) => <option key={o.id} value={o.id}>{o.titulo}</option>)}
           </Selecao>
-          <Campo rotulo="Mensalidade (R$) *" required inputMode="decimal" placeholder="597,00" value={f.valorMensal} onChange={set("valorMensal")} erro={campos?.valorMensal?.[0]} />
+          <Campo rotulo="Mensalidade (R$) *" required inputMode="decimal" placeholder="0,00" value={f.valorMensal} onChange={set("valorMensal")} erro={campos?.valorMensal?.[0]} />
           <Campo rotulo="Setup (R$)" inputMode="decimal" placeholder="0,00" value={f.valorSetup} onChange={set("valorSetup")} erro={campos?.valorSetup?.[0]} />
           <Campo rotulo="Início *" type="date" required value={f.inicio} onChange={(e) => setF({ ...f, inicio: e.target.value, fim: !contrato && f.fim === somarAno(f.inicio) ? somarAno(e.target.value) : f.fim })} />
           <Campo rotulo="Fim / renovação" type="date" value={f.fim} onChange={set("fim")} erro={campos?.fim?.[0]} />
           <Campo rotulo="Dia de cobrança (1–28) *" type="number" min={1} max={28} required value={f.diaVencimento} onChange={set("diaVencimento")} erro={campos?.diaVencimento?.[0]} />
         </div>
+        {planos.data && !planos.data.length && <p className="text-xs text-amber-700">Nenhum plano no catálogo. Cadastre em Administração → Planos e preços ou use "Personalizado".</p>}
         <p className="text-xs text-slate-500">Deixe o fim em branco para contrato por tempo indeterminado. As mensalidades são geradas em Financeiro → Gerar cobranças do mês.</p>
         <AreaTexto rotulo="Observações" rows={2} value={f.observacoes} onChange={set("observacoes")} />
         <Erro erro={erro} />

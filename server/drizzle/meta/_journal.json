@@ -50,6 +50,13 @@
       "when": 1793123097171,
       "tag": "0006_contratos_restricoes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793184995222,
+      "tag": "0007_planos",
+      "breakpoints": true
     }
   ]
 }

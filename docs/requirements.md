@@ -1,7 +1,8 @@
 # Requisitos, premissas e critérios de aceite
 
 ## Contexto e premissas (decididas com o responsável em 24/10/2026)
-- Uso **interno** da Recepção IA, uma empresa só (sem multiempresa). Se virar produto para clínicas, isolamento por empresa é requisito novo.
+- Produto para revenda no **modelo A**: uma instalação (servidor + banco) por cliente, cada uma de uma empresa só. Nome da empresa e catálogo de planos/preços configuráveis no Admin; nada de marca ou segmento fixo no código. Migrar para multiempresa (uma instalação para todos) é requisito novo, a decidir quando o custo de várias instalações pesar.
+- **P5 – Catálogo de planos**: admin cadastra planos (nome único sem diferenciar maiúsculas, mensalidade > 0, setup ≥ 0, ativo/inativo). Ao escolher um plano no contrato, mensalidade e setup vêm da tabela e podem ser ajustados; o contrato guarda os valores da venda, então mudar o catálogo não altera contratos existentes. "Personalizado" mantém o valor digitado.
 - Hospedagem alvo: VPS + Docker, infraestrutura ≤ R$ 100/mês.
 - Autenticação própria (sem provedor externo).
 - Dados iniciais: fictícios, marcados `[FICTÍCIO]`/`[E2E]`. Importação de dados reais só com autorização.

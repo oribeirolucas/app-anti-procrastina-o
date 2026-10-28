@@ -42,6 +42,9 @@ const passo = async (nome, fn) => { await fn(); console.log("✓", nome); };
     await p.click(`li:has-text("${titulo}") >> text=Criar contrato`);
     const valor = await p.inputValue('label:has-text("Mensalidade") input');
     if (valor !== "897,00") throw new Error(`mensalidade não veio da venda: ${valor}`);
+    // "Personalizado" não tem preço de tabela: mantém o valor negociado na venda
+    await p.selectOption('label:has-text("Plano") select', "Personalizado");
+    if ((await p.inputValue('label:has-text("Mensalidade") input')) !== "897,00") throw new Error("Personalizado trocou a mensalidade");
     await p.click('.fixed button:has-text("Salvar")');
     await p.waitForSelector("text=Contrato registrado.");
     await p.waitForSelector(`td:has-text("${empresa}")`);

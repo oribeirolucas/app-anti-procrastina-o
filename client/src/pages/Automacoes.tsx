@@ -314,7 +314,7 @@ function Origens() {
       {nova && (
         <Modal titulo="Nova origem de captação" aberto aoFechar={() => setNova(null)}>
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); criar.mutate(nova); }}>
-            <Campo rotulo="Nome *" required value={nova.nome} onChange={(e) => setNova({ ...nova, nome: e.target.value })} placeholder="Ex.: Landing page Odonto" />
+            <Campo rotulo="Nome *" required value={nova.nome} onChange={(e) => setNova({ ...nova, nome: e.target.value })} placeholder="Ex.: Landing page principal" />
             <Selecao rotulo="Tipo" value={nova.modo} onChange={(e) => setNova({ ...nova, modo: e.target.value as "hmac" })}>
               <option value="publico">Formulário do site (o navegador envia direto)</option>
               <option value="hmac">Webhook assinado (n8n, Zapier, outro sistema)</option>
@@ -325,7 +325,7 @@ function Origens() {
               </Selecao>
               <Campo rotulo="Origem gravada na oportunidade" value={nova.origemRotulo} onChange={(e) => setNova({ ...nova, origemRotulo: e.target.value })} />
             </div>
-            {nova.modo === "publico" && <Campo rotulo="Domínio do site (recomendado)" placeholder="https://minhaclinica.com.br" value={nova.dominioPermitido} onChange={(e) => setNova({ ...nova, dominioPermitido: e.target.value })} />}
+            {nova.modo === "publico" && <Campo rotulo="Domínio do site (recomendado)" placeholder="https://minhaempresa.com.br" value={nova.dominioPermitido} onChange={(e) => setNova({ ...nova, dominioPermitido: e.target.value })} />}
             <Erro erro={criar.error} />
             <div className="flex justify-end"><Botao carregando={criar.isPending}>Criar</Botao></div>
           </form>

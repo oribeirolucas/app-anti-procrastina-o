@@ -1,6 +1,6 @@
 # CLAUDE.md: instruções de desenvolvimento
 
-Plataforma interna da Recepção IA (CRM, financeiro, automações, agente de IA). Monólito modular:
+Plataforma comercial white-label (CRM, financeiro, automações, agente de IA), uma instalação por cliente. Monólito modular:
 `server/` (Node 22 + tRPC + Drizzle + PostgreSQL) e `client/` (React + Vite + Tailwind).
 
 ## Antes de começar qualquer tarefa

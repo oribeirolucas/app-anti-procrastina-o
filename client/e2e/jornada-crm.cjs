@@ -75,7 +75,7 @@ const passo = async (nome, fn) => { await fn(); passos.push(nome); console.log("
   });
   await passo("celular sem rolagem horizontal da página", async () => {
     await p.setViewportSize({ width: 390, height: 800 });
-    await p.click("text=☰ Recepção IA");
+    await p.click('header button:has-text("☰")');
     await p.click("nav >> text=Pipeline");
     await p.waitForSelector(`text=${titulo}`);
     const larg = await p.evaluate(() => document.documentElement.scrollWidth);

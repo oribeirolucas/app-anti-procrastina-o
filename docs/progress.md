@@ -14,6 +14,14 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Deploy (Docker, backup e restauração testados) | ⏳ | — |
 
+## Mudança de rumo (28/10/2026): white-label, modelo A
+- Removida a marca Recepção IA e os textos de clínica: nome da empresa vem de Admin → Configurações (`auth.marca`, público).
+- Catálogo de planos (`plano`, migração 0007) em Admin → Planos e preços. O contrato preenche mensalidade e setup a partir dele.
+- Segmento da empresa virou texto livre. Dados fictícios e categorias padrão agora são neutros.
+- Verificado: `npm test` 45/45 (novo `planos.test.ts`), `tsc` ok no server e no client, lint sem erros,
+  E2E local crm/financeiro/automacoes/contratos OK e roteiro de navegador nome → plano → contrato preenchido.
+- Pendente: limpar os dados fictícios do link de teste (aguarda sua confirmação no Supabase) e aplicar lá a migração 0007.
+
 ## Últimas verificações executadas (27/10/2026)
 - `server`: `npm test` passou (27 testes: fundação, CRM, integridade e financeiro) e `tsc --noEmit` ok.
 - E2E `jornada-financeiro.cjs`: 6/6 (despesa → baixa com diferença → painel → rastreio → geração idempotente → operador bloqueado).

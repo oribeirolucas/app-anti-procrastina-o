@@ -1,4 +1,4 @@
-# Recepção IA: plataforma interna
+# Plataforma comercial (white-label)
 
 CRM comercial, agente de IA, automações e financeiro num único sistema. Visão de negócio em
 [`empresa/README.md`](empresa/README.md). Arquitetura em [`ARCHITECTURE.md`](ARCHITECTURE.md).

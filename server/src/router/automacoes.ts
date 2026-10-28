@@ -168,7 +168,7 @@ export const automacoesRouter = router({
       modo: z.enum(["hmac", "publico"]),
       etapaId: z.string().uuid(),
       origemRotulo: z.string().trim().min(2).max(60).default("site"),
-      dominioPermitido: z.string().trim().url("Use o endereço completo, ex.: https://minhaclinica.com.br").max(200).optional().or(z.literal("").transform(() => undefined))
+      dominioPermitido: z.string().trim().url("Use o endereço completo, ex.: https://minhaempresa.com.br").max(200).optional().or(z.literal("").transform(() => undefined))
         .transform((v) => (v ? new URL(v).origin : undefined)),
     }))
     .mutation(async ({ ctx, input }) => {

@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/index.js";
-import { usuario } from "../db/schema.js";
+import { configuracao, usuario } from "../db/schema.js";
 import { permissoesDoPerfil } from "../auth/permissoes.js";
 import {
   bloqueadoPorTentativas,
@@ -46,6 +46,12 @@ export const authRouter = router({
     ctx.definirCookie("", new Date(0));
     if (ctx.usuario) await auditar(ctx.usuario.id, "logout");
     return { ok: true };
+  }),
+
+  // Nome exibido no login e no menu (público: aparece antes de entrar). Configurado no Admin.
+  marca: publicProcedure.query(async () => {
+    const [c] = await db.select().from(configuracao).where(eq(configuracao.chave, "nome_empresa"));
+    return { nomeEmpresa: typeof c?.valor === "string" && c.valor ? c.valor : "Plataforma comercial" };
   }),
 
   eu: publicProcedure.query(async ({ ctx }) => {

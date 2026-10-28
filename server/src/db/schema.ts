@@ -207,6 +207,28 @@ export const tarefa = pgTable(
   (t) => [index("tarefa_vence_idx").on(t.concluida, t.venceEm)],
 );
 
+// Catálogo de planos/produtos vendidos (preço de tabela). O contrato guarda nome e valores
+// copiados no momento da venda, então mudar o preço aqui não altera contratos já firmados.
+export const plano = pgTable(
+  "plano",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 60 }).notNull(),
+    valorMensal: dinheiro("valor_mensal").notNull(),
+    valorSetup: dinheiro("valor_setup").notNull().default("0"),
+    descricao: varchar("descricao", { length: 300 }),
+    ativo: boolean("ativo").notNull().default(true),
+    ordem: integer("ordem").notNull().default(0),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex("plano_nome_uq").on(sql`lower(${t.nome})`),
+    check("plano_valores_ck", sql`${t.valorMensal} > 0 and ${t.valorSetup} >= 0`),
+  ],
+);
+
 export const contrato = pgTable(
   "contrato",
   {
@@ -433,7 +455,7 @@ export const origemCaptacao = pgTable("origem_captacao", {
     .notNull()
     .references(() => etapaPipeline.id),
   origemRotulo: varchar("origem_rotulo", { length: 60 }).notNull().default("site"),
-  // Domínio autorizado para o formulário público (CORS). Ex.: https://minhaclinica.com.br
+  // Domínio autorizado para o formulário público (CORS). Ex.: https://minhaempresa.com.br
   dominioPermitido: varchar("dominio_permitido", { length: 200 }),
   ativa: boolean("ativa").notNull().default(true),
   recebidos: integer("recebidos").notNull().default(0),

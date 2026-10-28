@@ -35,11 +35,13 @@ function Layout({ eu }: { eu: Eu }) {
   const utils = trpc.useUtils();
   const sair = trpc.auth.logout.useMutation({ onSuccess: () => utils.invalidate() });
   const [menuAberto, setMenuAberto] = useState(false);
+  const nome = trpc.auth.marca.useQuery().data?.nomeEmpresa ?? "";
+  useEffect(() => { if (nome) document.title = nome; }, [nome]);
   const itens = MENU.filter((m) => !m.permissao || eu.permissoes.includes(m.permissao));
   return (
     <div className="min-h-screen bg-slate-50 md:flex">
       <aside className={`${menuAberto ? "block" : "hidden"} border-b border-slate-200 bg-white md:block md:min-h-screen md:w-56 md:border-b-0 md:border-r`}>
-        <div className="hidden px-4 py-4 text-base font-semibold text-indigo-700 md:block">Recepção IA</div>
+        <div className="hidden px-4 py-4 text-base font-semibold text-indigo-700 md:block">{nome}</div>
         <nav className="flex flex-col gap-0.5 px-2 pb-3">
           {itens.map((m) => (
             <NavLink key={m.para} to={m.para} end={m.para === "/"} onClick={() => setMenuAberto(false)}
@@ -51,7 +53,7 @@ function Layout({ eu }: { eu: Eu }) {
       </aside>
       <div className="min-w-0 flex-1">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
-          <button className="text-sm font-semibold text-indigo-700 md:hidden" onClick={() => setMenuAberto((v) => !v)}>☰ Recepção IA</button>
+          <button className="text-sm font-semibold text-indigo-700 md:hidden" onClick={() => setMenuAberto((v) => !v)}>☰ {nome || "Menu"}</button>
           <div className="ml-auto flex items-center gap-3 text-sm text-slate-600">
             <Sino />
             <span>{eu.nome} · <span className="text-slate-400">{eu.perfil}</span></span>

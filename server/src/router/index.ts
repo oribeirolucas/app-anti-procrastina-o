@@ -6,6 +6,7 @@ import { relatoriosRouter } from "./crm/relatorios.js";
 import { contratosRouter } from "./crm/contratos.js";
 import { financeiroRouter } from "./financeiro.js";
 import { automacoesRouter } from "./automacoes.js";
+import { planosRouter } from "./planos.js";
 import { router } from "./trpc.js";
 
 export const appRouter = router({
@@ -17,6 +18,7 @@ export const appRouter = router({
   contratos: contratosRouter,
   financeiro: financeiroRouter,
   automacoes: automacoesRouter,
+  planos: planosRouter,
 });
 
 export type AppRouter = typeof appRouter;
