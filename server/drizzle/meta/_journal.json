@@ -57,6 +57,13 @@
       "when": 1793184995222,
       "tag": "0007_planos",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793194533453,
+      "tag": "0008_consumo_franquia",
+      "breakpoints": true
     }
   ]
 }

@@ -210,10 +210,77 @@ function Planos() {
   );
 }
 
+type Limites = { ia_conversa: string; ia_tokens: string; whatsapp_conversa: string; bloquearAoAtingir: boolean };
+const numOuNulo = (v: string) => (v.trim() === "" ? null : Number(v.replace(/\D/g, "")));
+
+function UsoLimites() {
+  const utils = trpc.useUtils();
+  const avisar = useAvisar();
+  const gerir = usePode("config:gerir");
+  const q = trpc.admin.uso.useQuery();
+  const [f, setF] = useState<Limites | null>(null);
+  const salvar = trpc.admin.salvarLimites.useMutation({ onSuccess: () => { utils.admin.uso.invalidate(); setF(null); avisar("Franquia salva."); } });
+  const atual: Limites | null = q.data
+    ? {
+        ...(Object.fromEntries(q.data.recursos.map((r) => [r.recurso, r.limite === null ? "" : String(r.limite)])) as Omit<Limites, "bloquearAoAtingir">),
+        bloquearAoAtingir: q.data.bloquearAoAtingir,
+      }
+    : null;
+  const v = f ?? atual;
+  const [ano, mes] = (q.data?.mes ?? "").split("-");
+  return (
+    <Cartao titulo={`Uso do mês${q.data ? ` (${mes}/${ano})` : ""}`}>
+      <Erro erro={q.error} tentar={() => q.refetch()} />
+      {q.isLoading ? <Carregando /> : q.data && (
+        <div className="grid gap-3 md:grid-cols-3">
+          {q.data.recursos.map((r) => {
+            const pct = r.percentual === null ? null : Math.min(r.percentual, 1);
+            const cor = r.percentual === null ? "bg-slate-300" : r.percentual >= 1 ? "bg-red-600" : r.percentual >= 0.8 ? "bg-amber-500" : "bg-emerald-600";
+            return (
+              <div key={r.recurso} className="rounded-lg border border-slate-200 p-3">
+                <div className="text-sm text-slate-500">{r.nome}</div>
+                <div className="text-xl font-semibold text-slate-800">
+                  {r.usado.toLocaleString("pt-BR")}
+                  <span className="text-sm font-normal text-slate-500"> / {r.limite === null ? "sem limite" : r.limite.toLocaleString("pt-BR")}</span>
+                </div>
+                <div className="mt-2 h-2 rounded bg-slate-100" role="progressbar" aria-label={r.nome} aria-valuenow={Math.round((pct ?? 0) * 100)} aria-valuemin={0} aria-valuemax={100}>
+                  <div className={`h-2 rounded ${cor}`} style={{ width: `${(pct ?? 0) * 100}%` }} />
+                </div>
+                <div className="mt-1 text-xs text-slate-500">Custo estimado: {moeda(r.custoEstimado)}{r.percentual !== null && r.percentual >= 1 ? " · franquia esgotada" : ""}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p className="mt-3 text-xs text-slate-500">O consumo é registrado pelo agente de IA e pelo WhatsApp quando estiverem ativos. Os administradores recebem aviso no sininho ao atingir 80% e 100% da franquia.</p>
+      {gerir && v && (
+        <form className="mt-4 space-y-3 border-t border-slate-100 pt-4" onSubmit={(e) => {
+          e.preventDefault();
+          salvar.mutate({ ia_conversa: numOuNulo(v.ia_conversa), ia_tokens: numOuNulo(v.ia_tokens), whatsapp_conversa: numOuNulo(v.whatsapp_conversa), bloquearAoAtingir: v.bloquearAoAtingir });
+        }}>
+          <h4 className="text-sm font-semibold text-slate-700">Franquia mensal desta instalação</h4>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Campo rotulo="Conversas com IA" inputMode="numeric" placeholder="vazio = sem limite" value={v.ia_conversa} onChange={(e) => setF({ ...v, ia_conversa: e.target.value })} />
+            <Campo rotulo="Tokens de IA" inputMode="numeric" placeholder="vazio = sem limite" value={v.ia_tokens} onChange={(e) => setF({ ...v, ia_tokens: e.target.value })} />
+            <Campo rotulo="Conversas no WhatsApp" inputMode="numeric" placeholder="vazio = sem limite" value={v.whatsapp_conversa} onChange={(e) => setF({ ...v, whatsapp_conversa: e.target.value })} />
+          </div>
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input type="checkbox" className="mt-1" checked={v.bloquearAoAtingir} onChange={(e) => setF({ ...v, bloquearAoAtingir: e.target.checked })} />
+            <span>Bloquear ao esgotar a franquia<span className="block text-xs text-slate-500">Desmarcado: o uso continua e o excedente pode ser cobrado. Marcado: a IA para de responder e encaminha para atendimento humano.</span></span>
+          </label>
+          <Erro erro={salvar.error} />
+          <Botao carregando={salvar.isPending}>Salvar franquia</Botao>
+        </form>
+      )}
+    </Cartao>
+  );
+}
+
 export default function Admin() {
   const gerirUsuarios = usePode("usuarios:gerir");
   const abas = [
     ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }, { para: "/admin/planos", rotulo: "Planos e preços" }] : []),
+    { para: "/admin/uso", rotulo: "Uso e limites" },
     { para: "/admin/etapas", rotulo: "Pipeline" },
     { para: "/admin/auditoria", rotulo: "Auditoria" },
   ];
@@ -226,6 +293,7 @@ export default function Admin() {
         {gerirUsuarios && <Route path="usuarios" element={<Usuarios />} />}
         {gerirUsuarios && <Route path="configuracoes" element={<Configuracoes />} />}
         {gerirUsuarios && <Route path="planos" element={<Planos />} />}
+        <Route path="uso" element={<UsoLimites />} />
         <Route path="etapas" element={<Etapas />} />
         <Route path="auditoria" element={<Auditoria />} />
         <Route path="*" element={<Navigate to={abas[0].para} replace />} />

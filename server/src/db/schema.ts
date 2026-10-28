@@ -462,3 +462,25 @@ export const origemCaptacao = pgTable("origem_captacao", {
   ultimoRecebimentoEm: timestamp("ultimo_recebimento_em", { withTimezone: true }),
   criadoEm: criadoEm(),
 });
+
+// ───────────────────────── Consumo e franquia ─────────────────────────
+
+// Cada uso de recurso pago (IA, WhatsApp) vira uma linha. `referencia` é a chave de idempotência:
+// a mesma conversa/mensagem nunca é contada duas vezes, mesmo com reprocessamento.
+export const consumoUso = pgTable(
+  "consumo_uso",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recurso: varchar("recurso", { length: 30 }).notNull(),
+    quantidade: integer("quantidade").notNull(),
+    custoEstimado: dinheiro("custo_estimado"),
+    referencia: varchar("referencia", { length: 200 }).notNull(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex("consumo_referencia_uq").on(t.recurso, t.referencia),
+    index("consumo_recurso_data_idx").on(t.recurso, t.criadoEm),
+    check("consumo_recurso_ck", sql`${t.recurso} in ('ia_conversa','ia_tokens','whatsapp_conversa')`),
+    check("consumo_quantidade_ck", sql`${t.quantidade} > 0`),
+  ],
+);

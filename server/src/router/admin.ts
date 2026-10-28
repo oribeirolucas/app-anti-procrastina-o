@@ -1,11 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/index.js";
-import { auditoria, configuracao, usuario } from "../db/schema.js";
+import { auditoria, configuracao, consumoUso, usuario } from "../db/schema.js";
 import { encerrarSessoesDoUsuario, hashSenha } from "../auth/sessao.js";
 import { PERMISSOES } from "../auth/permissoes.js";
 import { auditar } from "../lib/auditoria.js";
+import { mesAtual, obterLimites, RECURSOS, usoNoPeriodo, type Recurso } from "../lib/consumo.js";
 import { autenticado, comPermissao, router } from "./trpc.js";
 
 const senhaForte = z
@@ -104,6 +105,42 @@ export const adminRouter = router({
         .values({ chave: input.chave, valor: input.valor })
         .onConflictDoUpdate({ target: configuracao.chave, set: { valor: input.valor, atualizadoEm: new Date() } });
       await auditar(ctx.usuario.id, "config.salvar", "configuracao", input.chave, { valor: input.valor });
+      return { ok: true };
+    }),
+
+  // Consumo do mês corrente frente à franquia (IA e WhatsApp). Custo é estimado pelo integrador.
+  uso: comPermissao("auditoria:ver").query(async () => {
+    const limites = await obterLimites();
+    const { mes, inicio, fimExclusivo } = await mesAtual();
+    const recursos = await Promise.all(
+      (Object.keys(RECURSOS) as Recurso[]).map(async (r) => {
+        const usado = await usoNoPeriodo(r, inicio, fimExclusivo);
+        const [c] = await db
+          .select({ custo: sql<string>`coalesce(sum(${consumoUso.custoEstimado}), 0)::numeric(14,2)::text` })
+          .from(consumoUso)
+          .where(and(eq(consumoUso.recurso, r), gte(consumoUso.criadoEm, inicio), lt(consumoUso.criadoEm, fimExclusivo)));
+        const limite = limites[r];
+        return { recurso: r, nome: RECURSOS[r], usado, limite, percentual: limite ? usado / limite : null, custoEstimado: c.custo };
+      }),
+    );
+    return { mes, bloquearAoAtingir: limites.bloquearAoAtingir, recursos };
+  }),
+
+  salvarLimites: comPermissao("config:gerir")
+    .input(
+      z.object({
+        ia_conversa: z.number().int().min(0).max(10_000_000).nullable(),
+        ia_tokens: z.number().int().min(0).max(10_000_000_000).nullable(),
+        whatsapp_conversa: z.number().int().min(0).max(10_000_000).nullable(),
+        bloquearAoAtingir: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await db
+        .insert(configuracao)
+        .values({ chave: "limites_uso", valor: input })
+        .onConflictDoUpdate({ target: configuracao.chave, set: { valor: input, atualizadoEm: new Date() } });
+      await auditar(ctx.usuario.id, "config.limites_uso", "configuracao", "limites_uso", input);
       return { ok: true };
     }),
 });

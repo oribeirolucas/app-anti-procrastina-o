@@ -2,6 +2,7 @@
 
 ## Contexto e premissas (decididas com o responsável em 24/10/2026)
 - Produto para revenda no **modelo A**: uma instalação (servidor + banco) por cliente, cada uma de uma empresa só. Nome da empresa e catálogo de planos/preços configuráveis no Admin; nada de marca ou segmento fixo no código. Migrar para multiempresa (uma instalação para todos) é requisito novo, a decidir quando o custo de várias instalações pesar.
+- **U1 – Franquia de uso**: cada consumo pago (conversa de IA, tokens, conversa de WhatsApp) é registrado com chave de idempotência (nunca conta duas vezes). Admin define a franquia mensal por recurso (vazio = sem limite) e se bloqueia ao esgotar. Admins recebem aviso no sininho em 80% e 100%, uma vez por faixa e mês. Com bloqueio, a ação paga não é executada e o atendimento vai para humano. Sem bloqueio, segue e o excedente pode ser cobrado. Gestor vê o uso; operador não.
 - **P5 – Catálogo de planos**: admin cadastra planos (nome único sem diferenciar maiúsculas, mensalidade > 0, setup ≥ 0, ativo/inativo). Ao escolher um plano no contrato, mensalidade e setup vêm da tabela e podem ser ajustados; o contrato guarda os valores da venda, então mudar o catálogo não altera contratos existentes. "Personalizado" mantém o valor digitado.
 - Hospedagem alvo: VPS + Docker, infraestrutura ≤ R$ 100/mês.
 - Autenticação própria (sem provedor externo).

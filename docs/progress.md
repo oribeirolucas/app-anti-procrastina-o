@@ -14,6 +14,11 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Deploy (Docker, backup e restauração testados) | ⏳ | — |
 
+## Franquia de uso (28/10/2026)
+- Tabela `consumo_uso` (migração 0008), `lib/consumo.ts` (`registrarConsumo`, `verificarLimite`) e tela Administração → Uso e limites.
+- Verificado: `npm test` 47/47 (novo `consumo.test.ts`: idempotência, avisos 80/100% sem duplicar, bloqueio, permissões) e tela conferida no navegador.
+- Ainda sem fonte de consumo real: o agente de IA e o WhatsApp vão chamar `verificarLimite` antes e `registrarConsumo` depois de cada ação paga.
+
 ## Mudança de rumo (28/10/2026): white-label, modelo A
 - Removida a marca Recepção IA e os textos de clínica: nome da empresa vem de Admin → Configurações (`auth.marca`, público).
 - Catálogo de planos (`plano`, migração 0007) em Admin → Planos e preços. O contrato preenche mensalidade e setup a partir dele.
