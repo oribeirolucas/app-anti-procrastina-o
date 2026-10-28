@@ -135,6 +135,10 @@ describe("memória (contexto)", () => {
     expect(texto).toContain('etapa "Lead"');
     expect(texto).toContain("R$ 499,00/mês");
     expect(texto).not.toMatch(/55119\d+/); // telefone não vai para o prompt
+    expect(texto).toContain("Base de conhecimento da empresa: vazia");
+    await a.agentes.salvarBaseConhecimento({ texto: "Garantia de 30 dias." });
+    expect(formatarContexto(await buscarContextoCRM(conversaId), "2026-10-28")).toContain("Garantia de 30 dias.");
+    expect(await (await chamadorComo("operador")).agentes.salvarBaseConhecimento({ texto: "x" }).then(() => "OK", (e) => e.code)).toBe("FORBIDDEN");
   });
 });
 

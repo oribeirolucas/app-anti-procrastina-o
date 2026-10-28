@@ -14,6 +14,14 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## A empresa vende a Recepção IA (28/10/2026)
+- Decisão: a plataforma (white-label) é o CRM de gestão. A Recepção IA é a empresa que a opera e vende a recepcionista de IA para clínicas de estética.
+- Perfil versionado em `empresa/perfil-crm.json`: nome, planos Essencial, Pro e Rede, base de conhecimento e prompts do SDR, Closer e CS.
+  Aplicado por `deploy/scripts/aplicar-perfil.mjs`, de forma idempotente (atualiza pelo nome e nunca apaga).
+- Nova base de conhecimento compartilhada (Agentes IA), injetada no contexto de todos os agentes. Edições são auditadas.
+- Decisão registrada: desconto sem aprovação é de **10%**, a regra mais recente, imposta pelo sistema. O documento antigo do Closer dizia 20%.
+- A base de conhecimento declara o que ainda NÃO é oferecido (marcação automática na agenda), para os agentes não venderem o que não existe.
+
 ## Transcrição de áudio com ChatGPT (28/10/2026)
 - O Claude conversa e o ChatGPT transcreve. Agentes só aceitam Claude.
 - O áudio do WhatsApp é baixado da Meta e transcrito pela OpenAI (SDK oficial `openai`, modelo `gpt-4o-transcribe` configurável) antes do agente responder.

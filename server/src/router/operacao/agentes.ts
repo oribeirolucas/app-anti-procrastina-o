@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../../db/index.js";
-import { agente, execucaoAgente } from "../../db/schema.js";
+import { agente, configuracao, execucaoAgente } from "../../db/schema.js";
 import { auditar } from "../../lib/auditoria.js";
 import { conflitoDeVersao } from "../../lib/integridade.js";
 import { comPermissao, router } from "../trpc.js";
@@ -43,6 +43,22 @@ export const agentesRouter = router({
         depois: { provedor: a.provedor, modelo: a.modelo, ativo: a.ativo, systemPrompt: a.systemPrompt },
       });
       return a;
+    }),
+
+  // Base de conhecimento da empresa: oferta, políticas, diferenciais, objeções. Vai para todos os agentes como dado.
+  baseConhecimento: comPermissao("agente:gerir").query(async () => {
+    const [c] = await db.select().from(configuracao).where(eq(configuracao.chave, "base_conhecimento"));
+    return { texto: typeof c?.valor === "string" ? c.valor : "", atualizadoEm: c?.atualizadoEm ?? null };
+  }),
+
+  salvarBaseConhecimento: comPermissao("agente:gerir")
+    .input(z.object({ texto: z.string().max(30_000, "Base muito longa (máx. 30 mil caracteres).") }))
+    .mutation(async ({ ctx, input }) => {
+      const [antes] = await db.select().from(configuracao).where(eq(configuracao.chave, "base_conhecimento"));
+      await db.insert(configuracao).values({ chave: "base_conhecimento", valor: input.texto })
+        .onConflictDoUpdate({ target: configuracao.chave, set: { valor: input.texto, atualizadoEm: new Date() } });
+      await auditar(ctx.usuario.id, "agente.base_conhecimento", "configuracao", "base_conhecimento", { antes: antes?.valor ?? "", depois: input.texto });
+      return { ok: true };
     }),
 
   execucoes: comPermissao("agente:gerir")

@@ -74,3 +74,9 @@ Ver [OPERACAO.md](OPERACAO.md) (setores, fluxos, rotinas, KPIs) e [agentes/](age
 3. **Construir** a recepcionista em n8n + WhatsApp Cloud API + Claude (sem white-label).
 4. **Fiscal:** começa no CPF; CNPJ no fim do mês 2 ou com 10–15 clientes.
 5. **Modelo de IA:** Claude Opus 5.5 em todos os agentes até medirmos custo e qualidade.
+
+## 8. Decisões de 28/10/2026
+1. A Recepção IA é operada pela plataforma deste repositório: CRM, agentes no WhatsApp, Aprovações e Customer Success. O perfil (planos, base de conhecimento e prompts) fica em `perfil-crm.json`.
+2. Conversa com o cliente: Claude. Transcrição de áudio: ChatGPT.
+3. Desconto sem aprovação: até **10%**, imposto pelo sistema. Substitui os 20% do agente 06.
+4. O plano Pro não promete marcação automática na agenda enquanto a integração não existir.

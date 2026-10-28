@@ -66,6 +66,31 @@ function Logs({ agente, aoFechar }: { agente: Agente; aoFechar: () => void }) {
   );
 }
 
+function BaseConhecimento() {
+  const utils = trpc.useUtils();
+  const avisar = useAvisar();
+  const q = trpc.agentes.baseConhecimento.useQuery();
+  const [texto, setTexto] = useState<string | null>(null);
+  const salvar = trpc.agentes.salvarBaseConhecimento.useMutation({ onSuccess: () => { utils.agentes.baseConhecimento.invalidate(); setTexto(null); avisar("Base de conhecimento salva."); } });
+  const valor = texto ?? q.data?.texto ?? "";
+  return (
+    <Cartao titulo="Base de conhecimento da empresa">
+      <p className="mb-2 text-xs text-slate-500">Oferta, garantia, políticas, diferenciais e respostas a objeções. Todos os agentes recebem este texto como referência: o que não estiver aqui (ou nos Planos e preços), eles não afirmam.</p>
+      <Erro erro={q.error} tentar={() => q.refetch()} />
+      {q.isLoading ? <Carregando /> : (
+        <form onSubmit={(e) => { e.preventDefault(); salvar.mutate({ texto: valor }); }} className="space-y-2">
+          <AreaTexto rotulo="Conteúdo" rows={12} maxLength={30000} value={valor} onChange={(e) => setTexto(e.target.value)} placeholder="Ex.: Garantia de 30 dias. Implantação em até 72h. Funciona 24/7..." />
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>{valor.length.toLocaleString("pt-BR")} / 30.000 caracteres{q.data?.atualizadoEm ? ` · atualizado em ${dataHora(q.data.atualizadoEm)}` : ""}</span>
+            <Botao carregando={salvar.isPending} disabled={texto === null}>Salvar base</Botao>
+          </div>
+          <Erro erro={salvar.error} />
+        </form>
+      )}
+    </Cartao>
+  );
+}
+
 export default function Agentes() {
   const q = trpc.agentes.listar.useQuery();
   const [editando, setEditando] = useState<Agente | "novo" | null>(null);
@@ -75,6 +100,7 @@ export default function Agentes() {
       <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
         Os agentes conversam com os clientes usando o Claude (precisa de ANTHROPIC_API_KEY no servidor). Áudios recebidos no WhatsApp são transcritos pelo ChatGPT (OPENAI_API_KEY) antes de chegar ao agente.
       </p>
+      <BaseConhecimento />
       <Erro erro={q.error} tentar={() => q.refetch()} />
       {q.isLoading ? <Carregando /> : !q.data?.length ? (
         <Vazio texto="Nenhum agente cadastrado. Comece pelos quatro: Marketing, Comercial, Customer Success e Financeiro." acao={<Botao onClick={() => setEditando("novo")}>Cadastrar agente</Botao>} />

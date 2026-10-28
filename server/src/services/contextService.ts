@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { contato, contrato, conversa, empresa, etapaPipeline, lancamento, mensagem, oportunidade, plano } from "../db/schema.js";
+import { configuracao, contato, contrato, conversa, empresa, etapaPipeline, lancamento, mensagem, oportunidade, plano } from "../db/schema.js";
 import type { Turno } from "./llmService.js";
 
 export const LIMITE_HISTORICO = 15;
@@ -13,6 +13,7 @@ export type ContextoCRM = {
   contratosAtivos: { plano: string; valorMensal: string; inicio: string; fim: string | null }[];
   historicoCompras: { descricao: string; valor: string; situacao: string; vencimento: string }[];
   planos: { nome: string; valorMensal: string; valorSetup: string; descricao: string | null }[];
+  baseConhecimento: string;
 };
 
 /** Últimas mensagens da conversa (mais antigas primeiro), no formato de turnos para o LLM. */
@@ -35,7 +36,9 @@ export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM
     .leftJoin(empresa, eq(empresa.id, contato.empresaId))
     .where(eq(conversa.id, conversaId));
   const planos = await db.select({ nome: plano.nome, valorMensal: plano.valorMensal, valorSetup: plano.valorSetup, descricao: plano.descricao }).from(plano).where(eq(plano.ativo, true)).orderBy(plano.ordem);
-  if (!c?.contatoId) return { conversaId, contato: null, oportunidade: null, contratosAtivos: [], historicoCompras: [], planos };
+  const [base] = await db.select().from(configuracao).where(eq(configuracao.chave, "base_conhecimento"));
+  const baseConhecimento = typeof base?.valor === "string" ? base.valor : "";
+  if (!c?.contatoId) return { conversaId, contato: null, oportunidade: null, contratosAtivos: [], historicoCompras: [], planos, baseConhecimento };
 
   // Oportunidade mais recente do contato (ou da empresa dele) que não esteja arquivada
   const donos = [eq(oportunidade.contatoId, c.contatoId), ...(c.empresaId ? [eq(oportunidade.empresaId, c.empresaId)] : [])];
@@ -65,6 +68,7 @@ export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM
     contratosAtivos,
     historicoCompras,
     planos,
+    baseConhecimento,
   };
 }
 
@@ -83,5 +87,7 @@ export function formatarContexto(ctx: ContextoCRM, hoje: string): string {
   if (ctx.historicoCompras.length) l.push("Últimas cobranças: " + ctx.historicoCompras.map((x) => `${x.descricao} ${br(x.valor)} venc. ${dataBR(x.vencimento)} (${x.situacao})`).join("; "));
   if (ctx.planos.length) l.push("Planos e preços oficiais: " + ctx.planos.map((p) => `${p.nome}: ${br(p.valorMensal)}/mês, setup ${br(p.valorSetup)}${p.descricao ? ` (${p.descricao})` : ""}`).join("; "));
   else l.push("Planos e preços oficiais: não cadastrados. Não informe valores; encaminhe para a equipe.");
+  // Base de conhecimento no fim, separada dos dados do lead
+  l.push(ctx.baseConhecimento.trim() ? `\nBase de conhecimento da empresa (oferta, políticas e respostas aprovadas):\n${ctx.baseConhecimento.trim()}` : "\nBase de conhecimento da empresa: vazia. Para perguntas sobre o produto, diga que vai confirmar com a equipe.");
   return l.join("\n");
 }
