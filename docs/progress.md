@@ -12,7 +12,22 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Financeiro R1–R7 | ✅ | `server/test/financeiro.test.ts` (7 cenários) e `client/e2e/jornada-financeiro.cjs` (6 passos no navegador) |
 | Automações A1–A7 | ✅ | `server/test/automacoes.test.ts` (10 cenários) e `client/e2e/jornada-automacoes.cjs` (7 passos) |
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
-| Deploy (Docker, backup e restauração testados) | ⏳ | — |
+| Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
+
+## Instalação por cliente (28/10/2026)
+- `Dockerfile` (front-end e API numa imagem, ~395 MB) e `deploy/docker-compose.yml`: app, PostgreSQL 16 sem porta exposta, Caddy com HTTPS automático e serviço de backup diário.
+- Scripts em `deploy/scripts/`: backup-agora, testar-restauracao, restaurar (com backup de segurança e confirmação) e atualizar (backup, build e checagem de saúde).
+- Verificado aqui com Docker, usando HTTPS local:
+  - stack saudável e login pela interface;
+  - backup gerado e conferido;
+  - teste de restauração em banco temporário: 1 empresa no backup e 2 no banco em uso;
+  - restauração real voltou a 1 empresa, com login funcionando depois;
+  - dados persistem ao recriar contêineres;
+  - agenda de backup no fuso do cliente.
+- **Não verificado aqui:**
+  - certificado real do Let's Encrypt (exige domínio público);
+  - cópia externa via rclone (exige bucket);
+  - `atualizar.sh` de ponta a ponta (a rede deste ambiente exige proxy no build).
 
 ## Franquia de uso (28/10/2026)
 - Tabela `consumo_uso` (migração 0008), `lib/consumo.ts` (`registrarConsumo`, `verificarLimite`) e tela Administração → Uso e limites.

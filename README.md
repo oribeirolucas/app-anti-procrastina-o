@@ -49,3 +49,6 @@ cd client && npx tsc -b && npm run lint
 ```
 
 Docs: [operação e diagnóstico](docs/OPERACAO.md) · [permissões](docs/PERMISSOES.md) · [fórmulas dos indicadores](docs/INDICADORES.md)
+
+## Instalar para um cliente
+Ver `docs/INSTALACAO.md` (Docker, HTTPS automático, backup diário e restauração testada).
