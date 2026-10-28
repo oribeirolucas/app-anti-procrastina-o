@@ -8,6 +8,8 @@ export const LIMITE_MIDIA = 16 * 1024 * 1024; // limite de áudio da Meta; a Ope
 export interface CanalWhatsApp {
   /** Envia texto ao número (só dígitos, com DDI). Não lança: devolve o resultado. */
   enviarTexto(para: string, texto: string): Promise<ResultadoEnvio>;
+  /** Envia um modelo aprovado pela Meta (obrigatório para escrever primeiro fora da janela de 24h). */
+  enviarModelo(para: string, modelo: string, idioma: string, parametros: string[]): Promise<ResultadoEnvio>;
   /** Baixa uma mídia recebida (ex.: áudio) pelo id da Meta. Lança se não conseguir. */
   baixarMidia(midiaId: string): Promise<Midia>;
 }
@@ -19,13 +21,24 @@ export class WhatsAppCloudApi implements CanalWhatsApp {
     private readonly http: typeof fetch = fetch,
   ) {}
 
-  async enviarTexto(para: string, texto: string): Promise<ResultadoEnvio> {
+  enviarTexto(para: string, texto: string): Promise<ResultadoEnvio> {
+    return this.enviar({ messaging_product: "whatsapp", recipient_type: "individual", to: para, type: "text", text: { preview_url: false, body: texto.slice(0, 4096) } });
+  }
+
+  enviarModelo(para: string, modelo: string, idioma: string, parametros: string[]): Promise<ResultadoEnvio> {
+    return this.enviar({
+      messaging_product: "whatsapp", recipient_type: "individual", to: para, type: "template",
+      template: { name: modelo, language: { code: idioma }, components: parametros.length ? [{ type: "body", parameters: parametros.map((t) => ({ type: "text", text: t.slice(0, 1000) })) }] : [] },
+    });
+  }
+
+  private async enviar(corpoEnvio: unknown): Promise<ResultadoEnvio> {
     const url = `https://graph.facebook.com/${this.cfg.versaoGraph}/${this.cfg.phoneNumberId}/messages`;
     try {
       const r = await this.http(url, {
         method: "POST",
         headers: { authorization: `Bearer ${this.cfg.token}`, "content-type": "application/json" },
-        body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: para, type: "text", text: { preview_url: false, body: texto.slice(0, 4096) } }),
+        body: JSON.stringify(corpoEnvio),
         signal: AbortSignal.timeout(15_000),
       });
       const corpo = (await r.json().catch(() => ({}))) as { messages?: { id: string }[]; error?: { message?: string; code?: number } };
@@ -57,10 +70,15 @@ export class WhatsAppCloudApi implements CanalWhatsApp {
 /** Canal desligado: nada sai do sistema. Usado em testes e enquanto o WhatsApp não estiver configurado. */
 export class WhatsAppDesligado implements CanalWhatsApp {
   readonly enviados: { para: string; texto: string }[] = [];
+  readonly modelos: { para: string; modelo: string; parametros: string[] }[] = [];
   constructor(private readonly motivo = "WhatsApp não configurado") {}
   async enviarTexto(para: string, texto: string): Promise<ResultadoEnvio> {
     this.enviados.push({ para, texto });
     log("aviso", "whatsapp.envio_desligado", { motivo: this.motivo });
+    return { enviado: false, motivo: this.motivo, recuperavel: false };
+  }
+  async enviarModelo(para: string, modelo: string, _idioma: string, parametros: string[]): Promise<ResultadoEnvio> {
+    this.modelos.push({ para, modelo, parametros });
     return { enviado: false, motivo: this.motivo, recuperavel: false };
   }
   readonly midias = new Map<string, Midia>();

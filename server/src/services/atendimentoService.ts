@@ -1,6 +1,6 @@
 import { and, asc, eq, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { contato, conversa, etapaPipeline, execucaoAgente, interacao, mensagem, notificacao, oportunidade, tarefa, usuario } from "../db/schema.js";
+import { agendamento, contato, conversa, etapaPipeline, execucaoAgente, interacao, mensagem, notificacao, oportunidade, tarefa, usuario } from "../db/schema.js";
 import { CONTRATO_DE_SAIDA, MENSAGEM_FALLBACK, REGRAS_COMUNS, type AreaAgente } from "../config/prompts.js";
 import { solicitarAprovacao } from "../lib/aprovacoes.js";
 import { registrarConsumo, verificarLimite } from "../lib/consumo.js";
@@ -119,7 +119,8 @@ export async function processarConversa(conversaId: string, deps: DepsAtendiment
   }
 
   const inicio = Date.now();
-  const hoje = hojeNoFuso(await obterFuso());
+  const fuso = await obterFuso();
+  const hoje = hojeNoFuso(fuso);
   const provedor = deps.provedores[ag.provedor];
   try {
     if (!provedor) throw new ErroLLM(`provedor ${ag.provedor} desconhecido`, false);
@@ -127,7 +128,7 @@ export async function processarConversa(conversaId: string, deps: DepsAtendiment
       provedor: ag.provedor,
       modelo: ag.modelo,
       system: [ag.systemPrompt, REGRAS_COMUNS, CONTRATO_DE_SAIDA].join("\n\n"),
-      contexto: formatarContexto(ctx, hoje),
+      contexto: formatarContexto(ctx, hoje, fuso),
       historico: await buscarHistorico(conversaId),
     });
     const { resposta, efeitos } = await executarAcoes(r.saida.acoes, r.saida.resposta, { ctx, area: rota.area, agenteId: ag.id, conversaId, refBase: pendentes[pendentes.length - 1] });
@@ -229,6 +230,22 @@ export async function executarAcoes(acoes: AcaoAgente[], resposta: string, c: Co
         await avisarEquipe(db, { titulo: "Cliente pediu atendimento humano", mensagem: a.descricao ?? "", chave: `humano:${ref}`, contatoId: c.ctx.contato?.id, oportunidadeId: c.ctx.oportunidade?.id });
         efeitos.push("transferido para humano");
         break;
+      case "confirmar_consulta":
+      case "cancelar_consulta":
+      case "remarcar_consulta": {
+        const q = c.ctx.proximaConsulta;
+        if (!q) break; // sem consulta no contexto: nada a atualizar (a resposta segue normalmente)
+        const nova = a.tipo === "confirmar_consulta" ? "confirmado" : a.tipo === "cancelar_consulta" ? "cancelado" : "remarcar";
+        const [ok] = await db.update(agendamento)
+          .set({ situacao: nova, respostaEm: new Date(), observacao: a.descricao?.slice(0, 300) ?? null, versao: sql`${agendamento.versao} + 1`, atualizadoEm: new Date() })
+          .where(and(eq(agendamento.id, q.id), inArray(agendamento.situacao, ["agendado", "confirmado", "remarcar"])))
+          .returning({ id: agendamento.id });
+        if (!ok) break;
+        efeitos.push(`consulta ${nova}`);
+        // Vaga liberada ou pedido de novo horário: a recepção precisa agir
+        if (nova !== "confirmado") await avisarEquipe(db, { titulo: nova === "cancelado" ? "Consulta cancelada pelo paciente: vaga livre" : "Paciente pediu para remarcar", mensagem: `${c.ctx.contato?.nome ?? "Paciente"}: ${a.descricao ?? "sem detalhes"}`, chave: `agenda:${q.id}:${nova}`, contatoId: c.ctx.contato?.id });
+        break;
+      }
       case "descadastrar":
         if (c.ctx.contato) {
           await db.update(contato).set({ descadastrado: true, versao: sql`${contato.versao} + 1`, atualizadoEm: new Date() }).where(eq(contato.id, c.ctx.contato.id));

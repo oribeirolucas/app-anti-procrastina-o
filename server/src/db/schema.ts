@@ -604,6 +604,8 @@ export const mensagem = pgTable(
       .references(() => conversa.id, { onDelete: "cascade" }),
     autor: varchar("autor", { length: 8 }).notNull(), // cliente | ia | humano
     texto: text("texto").notNull(),
+    // Por que a mensagem saiu: atendimento (resposta) | retomada | lembrete | campanha. Só "atendimento" abre ciclo de retomada.
+    origem: varchar("origem", { length: 12 }).notNull().default("atendimento"),
     idExterno: varchar("id_externo", { length: 120 }), // id da mensagem no canal (idempotência do webhook)
     // Mídia recebida (ex.: áudio do WhatsApp): id na Meta para baixar; o texto vira a transcrição
     midiaId: varchar("midia_id", { length: 120 }),
@@ -622,5 +624,94 @@ export const mensagem = pgTable(
     index("mensagem_fila_idx").on(t.autor, t.processadaEm).where(sql`processada_em is null`),
     uniqueIndex("mensagem_externo_uq").on(t.conversaId, t.idExterno),
     check("mensagem_autor_ck", sql`${t.autor} in ('cliente','ia','humano')`),
+  ],
+);
+
+// ───────────────────────── Recursos do plano Pro (retomada, agenda, reativação) ─────────────────────────
+
+// Retomada automática de quem parou de responder. Um registro por passo e por última mensagem nossa
+// (idempotência: o mesmo silêncio nunca gera duas retomadas iguais).
+export const retomada = pgTable(
+  "retomada",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversaId: uuid("conversa_id").notNull().references(() => conversa.id, { onDelete: "cascade" }),
+    mensagemRefId: uuid("mensagem_ref_id").notNull(), // última mensagem nossa antes do silêncio
+    passo: integer("passo").notNull(), // 1 ou 2
+    situacao: varchar("situacao", { length: 10 }).notNull(), // enviada | falhou
+    erro: varchar("erro", { length: 300 }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex("retomada_uq").on(t.conversaId, t.mensagemRefId, t.passo),
+    check("retomada_situacao_ck", sql`${t.situacao} in ('enviada','falhou')`),
+  ],
+);
+
+// Agenda da clínica (importada por planilha ou cadastrada): base da confirmação de consultas.
+export const agendamento = pgTable(
+  "agendamento",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    nome: varchar("nome", { length: 200 }).notNull(),
+    telefone: varchar("telefone", { length: 20 }).notNull(), // só dígitos, com DDI
+    inicio: timestamp("inicio", { withTimezone: true }).notNull(),
+    procedimento: varchar("procedimento", { length: 120 }),
+    profissional: varchar("profissional", { length: 120 }),
+    // agendado → (lembrete) → confirmado | cancelado | remarcar | sem_resposta; depois compareceu | faltou
+    situacao: varchar("situacao", { length: 12 }).notNull().default("agendado"),
+    lembreteEnviadoEm: timestamp("lembrete_enviado_em", { withTimezone: true }),
+    respostaEm: timestamp("resposta_em", { withTimezone: true }),
+    erroLembrete: varchar("erro_lembrete", { length: 300 }),
+    idExterno: varchar("id_externo", { length: 120 }), // chave da linha importada (reimportar não duplica)
+    origem: varchar("origem", { length: 10 }).notNull().default("manual"), // manual | planilha
+    observacao: varchar("observacao", { length: 300 }),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index("agendamento_inicio_idx").on(t.inicio),
+    index("agendamento_telefone_idx").on(t.telefone, t.inicio),
+    uniqueIndex("agendamento_externo_uq").on(t.idExterno).where(sql`id_externo is not null`),
+    check("agendamento_situacao_ck", sql`${t.situacao} in ('agendado','confirmado','cancelado','remarcar','sem_resposta','compareceu','faltou')`),
+  ],
+);
+
+// Campanha de reativação: só envia depois de aprovada pelo estrategista (mensagem em massa).
+export const campanha = pgTable(
+  "campanha",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 120 }).notNull(),
+    modelo: varchar("modelo", { length: 120 }).notNull(), // nome do modelo aprovado na Meta
+    // rascunho → aguardando_aprovacao → aprovada → enviando → concluida | recusada | cancelada
+    situacao: varchar("situacao", { length: 22 }).notNull().default("rascunho"),
+    solicitacaoId: uuid("solicitacao_id").references(() => solicitacaoAprovacao.id, { onDelete: "set null" }),
+    limitePorCiclo: integer("limite_por_ciclo").notNull().default(30),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [check("campanha_situacao_ck", sql`${t.situacao} in ('rascunho','aguardando_aprovacao','aprovada','enviando','concluida','recusada','cancelada')`)],
+);
+
+export const campanhaDestinatario = pgTable(
+  "campanha_destinatario",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    campanhaId: uuid("campanha_id").notNull().references(() => campanha.id, { onDelete: "cascade" }),
+    nome: varchar("nome", { length: 200 }).notNull(),
+    telefone: varchar("telefone", { length: 20 }).notNull(),
+    situacao: varchar("situacao", { length: 10 }).notNull().default("pendente"), // pendente | enviado | falhou | pulado
+    motivo: varchar("motivo", { length: 300 }),
+    enviadoEm: timestamp("enviado_em", { withTimezone: true }),
+    respondeuEm: timestamp("respondeu_em", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("camp_dest_uq").on(t.campanhaId, t.telefone),
+    index("camp_dest_fila_idx").on(t.campanhaId, t.situacao),
+    check("camp_dest_situacao_ck", sql`${t.situacao} in ('pendente','enviado','falhou','pulado')`),
   ],
 );

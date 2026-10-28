@@ -2,6 +2,12 @@
 
 ## Contexto e premissas (decididas com o responsável em 24/10/2026)
 - Produto para revenda no **modelo A**: uma instalação (servidor + banco) por cliente, cada uma de uma empresa só. Nome da empresa e catálogo de planos/preços configuráveis no Admin; nada de marca ou segmento fixo no código. Migrar para multiempresa (uma instalação para todos) é requisito novo, a decidir quando o custo de várias instalações pesar.
+- **P6 – Recursos do plano Pro** (configuráveis em Administração → Recursos Pro, todos desligados por padrão):
+  - retomada de quem parou de responder: passo 1 em texto livre dentro da janela de 24h; passo 2 só com modelo aprovado pela Meta. Idempotente por passo. Para quando o cliente responde, pede para parar, vai para humano, tem consulta marcada ou o negócio fechou;
+  - confirmação de consultas na véspera a partir da hora configurada, uma vez por consulta. A resposta do paciente (confirmar, cancelar ou remarcar) atualiza a agenda pela IA; cancelar ou remarcar gera tarefa para a recepção;
+  - agenda importada por CSV com prévia e erro por linha. Reimportar não duplica;
+  - campanha de reativação: só envia depois do Go em Aprovações, em lotes, pulando quem pediu para parar e registrando quem respondeu;
+  - relatório mensal calculado com dados reais.
 - **I10 – Divisão de IAs**: Claude conversa (agentes só aceitam Claude); ChatGPT só transcreve áudio. Áudio é transcrito antes do agente responder; falha na transcrição não trava o atendimento (o agente pede texto); consumo em segundos entra na franquia.
 - **I9 – Atendimento autônomo WhatsApp** (docs/WHATSAPP.md): webhook assinado e idempotente; número novo vira lead na 1ª etapa; memória das últimas 15 mensagens + dados do CRM; roteamento SDR / Closer / CS por etapa e contrato; ações do LLM validadas pelo sistema (desconto > 10% e reembolso → Aprovações); fallback garantido (cliente nunca fica sem resposta; conversa vai para humano); conversa em atendimento humano não é respondida pela IA; franquia de uso respeitada; nenhuma mensagem real em teste.
 - **G1 – Aprovações (governança)**: agentes não executam orçamento, desconto ou deploy sem Go do estrategista (admin). Pedido idempotente pela referência; decisão única (não decide duas vezes); recusa exige motivo; tudo auditado.

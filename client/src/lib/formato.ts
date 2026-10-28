@@ -14,6 +14,10 @@ export const data = (v: string | Date | null | undefined) => {
 export const dataHora = (v: string | Date | null | undefined) =>
   v ? new Intl.DateTimeFormat("pt-BR", { timeZone: fuso, dateStyle: "short", timeStyle: "short" }).format(new Date(v)) : "—";
 
+/** Dia da semana, data e hora no fuso da clínica (ex.: "sex., 30/10, 14:00"). */
+export const diaHora = (v: string | Date) =>
+  new Intl.DateTimeFormat("pt-BR", { timeZone: fuso, weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(v));
+
 export const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(1).replace(".", ",")}%`);
 
 /** Data de hoje no fuso configurado, AAAA-MM-DD */

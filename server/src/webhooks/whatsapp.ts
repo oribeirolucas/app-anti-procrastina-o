@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/index.js";
-import { contato, conversa, etapaPipeline, interacao, mensagem, oportunidade } from "../db/schema.js";
+import { campanhaDestinatario, contato, conversa, etapaPipeline, interacao, mensagem, oportunidade } from "../db/schema.js";
 import { emitirEvento } from "../lib/eventos.js";
 import { log } from "../lib/log.js";
 import { assinaturaValida, json, lerCorpo } from "./captacao.js";
@@ -91,6 +91,9 @@ export async function registrarMensagemRecebida(m: MensagemRecebida) {
     // Áudio entra na timeline depois de transcrito (com o texto); texto entra já
     if (nova.length && !m.midia) await tx.insert(interacao).values({ tipo: "whatsapp", contatoId: c.id, descricao: `WhatsApp · cliente: ${m.texto}`.slice(0, 2000), respostaDoContato: true });
     if (nova.length) await emitirEvento("interacao.resposta_contato", { contatoId: c.id }, `wa:${m.idExterno}`, tx);
+    // Resposta a uma campanha de reativação (para o relatório)
+    if (nova.length) await tx.update(campanhaDestinatario).set({ respondeuEm: m.recebidaEm })
+      .where(and(eq(campanhaDestinatario.telefone, m.telefone), eq(campanhaDestinatario.situacao, "enviado"), isNull(campanhaDestinatario.respondeuEm)));
     return { conversaId: conv.id, duplicada: !nova.length, leadNovo };
   });
 }

@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { configuracao, contato, contrato, conversa, empresa, etapaPipeline, lancamento, mensagem, oportunidade, plano } from "../db/schema.js";
+import { agendamento, configuracao, contato, contrato, conversa, empresa, etapaPipeline, lancamento, mensagem, oportunidade, plano } from "../db/schema.js";
 import type { Turno } from "./llmService.js";
 
 export const LIMITE_HISTORICO = 15;
@@ -25,6 +25,7 @@ export type ContextoCRM = {
   historicoCompras: { descricao: string; valor: string; situacao: string; vencimento: string }[];
   planos: PlanoOferta[];
   baseConhecimento: string;
+  proximaConsulta?: { id: string; versao: number; inicio: Date; procedimento: string | null; situacao: string } | null;
 };
 
 /** Últimas mensagens da conversa (mais antigas primeiro), no formato de turnos para o LLM. */
@@ -40,6 +41,14 @@ export async function buscarHistorico(conversaId: string, limite = LIMITE_HISTOR
 
 /** Metadados do lead/cliente: nome, etapa, valor da oportunidade, contratos e histórico de cobranças. */
 export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM> {
+  const [conv] = await db.select({ telefone: conversa.idExterno }).from(conversa).where(eq(conversa.id, conversaId));
+  // Próxima consulta do número (inclui as das últimas 2h, para respostas em cima da hora)
+  const [proximaConsulta] = conv
+    ? await db.select({ id: agendamento.id, versao: agendamento.versao, inicio: agendamento.inicio, procedimento: agendamento.procedimento, situacao: agendamento.situacao })
+        .from(agendamento)
+        .where(and(eq(agendamento.telefone, conv.telefone), gte(agendamento.inicio, new Date(Date.now() - 2 * 3600_000)), inArray(agendamento.situacao, ["agendado", "confirmado", "remarcar"])))
+        .orderBy(asc(agendamento.inicio)).limit(1)
+    : [];
   const [c] = await db
     .select({ contatoId: contato.id, nome: contato.nome, descadastrado: contato.descadastrado, empresaId: contato.empresaId, empresa: empresa.nome })
     .from(conversa)
@@ -49,7 +58,7 @@ export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM
   const planos = await planosAtivos();
   const [base] = await db.select().from(configuracao).where(eq(configuracao.chave, "base_conhecimento"));
   const baseConhecimento = typeof base?.valor === "string" ? base.valor : "";
-  if (!c?.contatoId) return { conversaId, contato: null, oportunidade: null, contratosAtivos: [], historicoCompras: [], planos, baseConhecimento };
+  if (!c?.contatoId) return { conversaId, contato: null, oportunidade: null, contratosAtivos: [], historicoCompras: [], planos, baseConhecimento, proximaConsulta: proximaConsulta ?? null };
 
   // Oportunidade mais recente do contato (ou da empresa dele) que não esteja arquivada
   const donos = [eq(oportunidade.contatoId, c.contatoId), ...(c.empresaId ? [eq(oportunidade.empresaId, c.empresaId)] : [])];
@@ -80,6 +89,7 @@ export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM
     historicoCompras,
     planos,
     baseConhecimento,
+    proximaConsulta: proximaConsulta ?? null,
   };
 }
 
@@ -87,7 +97,7 @@ const br = (v: string) => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
 const dataBR = (d: string) => d.split("-").reverse().join("/");
 
 /** Bloco de texto injetado no prompt antes da conversa. Só dados verificáveis do CRM, sem telefone ou e-mail. */
-export function formatarContexto(ctx: ContextoCRM, hoje: string): string {
+export function formatarContexto(ctx: ContextoCRM, hoje: string, fuso = "America/Sao_Paulo"): string {
   const l: string[] = [`Data de hoje: ${dataBR(hoje)}`];
   if (!ctx.contato) l.push("Contato: novo, ainda sem cadastro.");
   else l.push(`Contato: ${ctx.contato.nome}${ctx.contato.empresa ? ` (empresa: ${ctx.contato.empresa})` : ""}`);
@@ -95,6 +105,11 @@ export function formatarContexto(ctx: ContextoCRM, hoje: string): string {
   else l.push("Oportunidade: nenhuma.");
   if (ctx.contratosAtivos.length) l.push("Contratos ativos: " + ctx.contratosAtivos.map((x) => `${x.plano} ${br(x.valorMensal)}/mês desde ${dataBR(x.inicio)}${x.fim ? ` até ${dataBR(x.fim)}` : ""}`).join("; "));
   else l.push("Contratos ativos: nenhum (não é cliente pagante).");
+  if (ctx.proximaConsulta) {
+    const q = ctx.proximaConsulta;
+    const quando = new Intl.DateTimeFormat("pt-BR", { timeZone: fuso, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(q.inicio);
+    l.push(`Consulta agendada: ${quando}${q.procedimento ? ` (${q.procedimento})` : ""} · situação: ${q.situacao}`);
+  }
   if (ctx.historicoCompras.length) l.push("Últimas cobranças: " + ctx.historicoCompras.map((x) => `${x.descricao} ${br(x.valor)} venc. ${dataBR(x.vencimento)} (${x.situacao})`).join("; "));
   if (ctx.planos.length) {
     l.push("Planos e preços oficiais (só ofereça o que está em \"Entrega hoje\"; o que está \"Em construção\" NÃO pode ser vendido nem prometido, e não informe data):");

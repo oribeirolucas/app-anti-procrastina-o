@@ -12,6 +12,7 @@ import { agentesRouter } from "./operacao/agentes.js";
 import { inboxRouter } from "./operacao/inbox.js";
 import { marketingRouter } from "./operacao/marketing.js";
 import { sucessoRouter } from "./operacao/sucesso.js";
+import { proRouter } from "./operacao/pro.js";
 import { router } from "./trpc.js";
 
 export const appRouter = router({
@@ -29,6 +30,7 @@ export const appRouter = router({
   inbox: inboxRouter,
   marketing: marketingRouter,
   sucesso: sucessoRouter,
+  pro: proRouter,
 });
 
 export type AppRouter = typeof appRouter;

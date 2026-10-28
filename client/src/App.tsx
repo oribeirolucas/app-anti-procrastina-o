@@ -22,8 +22,11 @@ import Agentes from "./pages/Agentes";
 import Inbox from "./pages/Inbox";
 import Marketing from "./pages/Marketing";
 import Sucesso from "./pages/Sucesso";
+import Agenda from "./pages/Agenda";
+import Reativacao from "./pages/Reativacao";
+import RelatorioMensal from "./pages/RelatorioMensal";
 import {
-  Bot, Building2, FileSignature, HeartPulse, KanbanSquare, LayoutDashboard, ListChecks, Megaphone, MessagesSquare, Settings, ShieldCheck, Users, Wallet, Workflow,
+  BarChart3, Bot, Building2, CalendarCheck, FileSignature, RefreshCcw, HeartPulse, KanbanSquare, LayoutDashboard, ListChecks, Megaphone, MessagesSquare, Settings, ShieldCheck, Users, Wallet, Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,13 +38,16 @@ const MENU: ItemMenu[] = [
   { para: "/empresas", rotulo: "Empresas", icone: Building2 },
   { para: "/contatos", rotulo: "Contatos", icone: Users },
   { para: "/tarefas", rotulo: "Tarefas", icone: ListChecks },
+  { para: "/agenda", rotulo: "Agenda", icone: CalendarCheck },
   { para: "/contratos", rotulo: "Contratos", icone: FileSignature },
   { para: "/marketing", rotulo: "Marketing", icone: Megaphone, permissao: "marketing:ver" },
   { para: "/sucesso", rotulo: "Customer Success", icone: HeartPulse },
   { para: "/inbox", rotulo: "Inbox WhatsApp", icone: MessagesSquare, permissao: "agente:atender", grupo: "Operação por IA" },
   { para: "/agentes", rotulo: "Agentes IA", icone: Bot, permissao: "agente:gerir" },
+  { para: "/reativacao", rotulo: "Reativação", icone: RefreshCcw, permissao: "automacoes:ler" },
   { para: "/automacoes", rotulo: "Automações", icone: Workflow, permissao: "automacoes:ler" },
   { para: "/financeiro", rotulo: "Financeiro", icone: Wallet, permissao: "financeiro:ler", grupo: "Gestão" },
+  { para: "/relatorio", rotulo: "Relatório mensal", icone: BarChart3, permissao: "auditoria:ver" },
   { para: "/admin", rotulo: "Administração", icone: Settings, permissao: "auditoria:ver" },
 ];
 
@@ -89,6 +95,9 @@ function Layout({ eu }: { eu: Eu }) {
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/contratos" element={<Contratos />} />
             <Route path="/sucesso" element={<Sucesso />} />
+            <Route path="/agenda" element={<Agenda />} />
+            {eu.permissoes.includes("automacoes:ler") && <Route path="/reativacao" element={<Reativacao />} />}
+            {eu.permissoes.includes("auditoria:ver") && <Route path="/relatorio" element={<RelatorioMensal />} />}
             {eu.permissoes.includes("aprovacoes:ver") && <Route path="/aprovacoes" element={<Aprovacoes />} />}
             {eu.permissoes.includes("agente:gerir") && <Route path="/agentes" element={<Agentes />} />}
             {eu.permissoes.includes("agente:atender") && <Route path="/inbox" element={<Inbox />} />}

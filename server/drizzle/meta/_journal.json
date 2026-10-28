@@ -92,6 +92,13 @@
       "when": 1793202239125,
       "tag": "0012_oferta_planos",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793203149501,
+      "tag": "0013_recursos_pro",
+      "breakpoints": true
     }
   ]
 }

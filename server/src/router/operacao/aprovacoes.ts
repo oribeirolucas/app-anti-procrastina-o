@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../../db/index.js";
-import { agente, solicitacaoAprovacao, usuario } from "../../db/schema.js";
+import { agente, campanha, solicitacaoAprovacao, usuario } from "../../db/schema.js";
 import { auditar } from "../../lib/auditoria.js";
 import { conflitoDeVersao } from "../../lib/integridade.js";
 import { comPermissao, router } from "../trpc.js";
@@ -50,6 +50,10 @@ export const aprovacoesRouter = router({
           if (atual.situacao !== "pendente") throw new TRPCError({ code: "CONFLICT", message: "Esta solicitação já foi decidida." });
           throw conflitoDeVersao();
         }
+        // Campanha de reativação só começa a enviar depois do Go
+        if (s.referencia.startsWith("campanha:"))
+          await tx.update(campanha).set({ situacao: s.situacao === "aprovada" ? "aprovada" : "recusada", atualizadoEm: new Date() })
+            .where(and(eq(campanha.id, s.referencia.slice("campanha:".length)), eq(campanha.situacao, "aguardando_aprovacao")));
         await auditar(ctx.usuario.id, `aprovacao.${s.situacao}`, "solicitacao_aprovacao", s.id, { tipo: s.tipo, titulo: s.titulo, valor: s.valor, motivo: s.motivoDecisao }, tx);
         return s;
       });

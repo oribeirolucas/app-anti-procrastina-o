@@ -3,7 +3,10 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 
 // Contrato de saída de todos os agentes: texto para o cliente + ações que o SISTEMA valida e executa.
-export const TIPOS_ACAO = ["qualificado", "oferecer_desconto", "solicitar_aprovacao", "pedir_link_pagamento", "risco_cancelamento", "transferir_humano", "descadastrar"] as const;
+export const TIPOS_ACAO = [
+  "qualificado", "oferecer_desconto", "solicitar_aprovacao", "pedir_link_pagamento", "risco_cancelamento", "transferir_humano", "descadastrar",
+  "confirmar_consulta", "cancelar_consulta", "remarcar_consulta",
+] as const;
 export const saidaAgenteSchema = z.object({
   resposta: z.string(),
   acoes: z.array(

@@ -46,10 +46,10 @@ Tudo do Essencial, mais:
 |---|---|
 | Até **800 conversas por mês** | ✅ |
 | Ajustes de conteúdo ilimitados (aplicados em até 1 dia útil) | ✅ |
-| Relatório mensal de resultados: conversas atendidas, contatos qualificados, atendimentos fora do horário | 🔜 |
-| Retomada automática de quem perguntou e não agendou (até 2 mensagens, respeitando quem pede para parar) | 🔜 |
-| Confirmação de consultas no dia anterior, contra faltas | 🔜 |
-| Campanha mensal de reativação de pacientes inativos (lista enviada pela clínica) | 🔜 |
+| Relatório mensal de resultados: conversas, atendimentos fora do horário, novos contatos, confirmações, faltas e reativados | ✅ |
+| Retomada automática de quem perguntou e não agendou (até 2 mensagens, respeitando quem pede para parar) | ✅ |
+| Confirmação de consultas no dia anterior, contra faltas (agenda importada por planilha ou cadastrada) | ✅ |
+| Campanha mensal de reativação de pacientes inativos (lista enviada pela clínica; disparo só após aprovação) | ✅ |
 
 ### Rede: R$ 897/mês
 Tudo do Pro, mais:
@@ -67,17 +67,14 @@ Tudo do Pro, mais:
 - Sem fidelidade no plano mensal. O plano anual isenta o setup.
 - **Desconto:** os agentes podem oferecer até **10%** sem aprovação. Acima disso, a decisão é do fundador (Aprovações).
 
-## Hoje o Pro e o Rede não podem ser vendidos pelo que prometem
-Várias entregas que diferenciam os planos estão marcadas 🔜. Até virarem ✅:
-- Os agentes **vendem só o Essencial** (ou o Pro, informando com clareza o que entra agora e o que vem depois, sem data).
-- O marketing **não anuncia** confirmação de consulta, reativação nem relatórios.
+## Situação de liberação
+- **Essencial e Pro: liberados para venda** (28/10/2026). Requisito da implantação do Pro: modelos de mensagem aprovados pela Meta na conta da clínica (confirmação, retomada e reativação), em algumas horas a poucos dias.
+- **Rede: ainda não.** Faltam multiunidade (até 3 números) e relatório semanal por unidade. Até lá, clínica com 2 ou mais unidades vai para o fundador (contrato sob medida).
+- Integração direta com Google Agenda: ainda não existe; a agenda entra por planilha ou cadastro no painel.
 
-### Ordem de construção para liberar o Pro e o Rede
-1. **Modelos de mensagem da Meta e retomada automática.** Mensagem iniciada pela clínica fora da janela de 24h exige modelo aprovado pela Meta.
-2. **Relatório mensal automático** (os dados já são registrados).
-3. **Confirmação de consultas:** a partir da lista do dia enviada pela clínica (planilha); depois, pelo Google Agenda.
-4. **Reativação de pacientes inativos.**
-5. **Multiunidade.**
+### Próximos passos (Rede)
+1. Multiunidade: vários números de WhatsApp na mesma instalação, cada um com suas informações e agenda.
+2. Relatório semanal por unidade.
 
 ## Como cada time usa esta oferta
 | Time (agentes) | Usa para |

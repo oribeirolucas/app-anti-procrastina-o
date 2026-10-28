@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { trpc } from "../lib/trpc";
+import { trpc, type Entradas } from "../lib/trpc";
 import { dataHora, moeda } from "../lib/formato";
 import { useAvisar } from "../lib/aviso";
 import { usePode } from "../lib/sessao";
@@ -296,10 +296,57 @@ function UsoLimites() {
   );
 }
 
+type CfgPro = Entradas["pro"]["salvarConfiguracao"];
+
+function RecursosPro() {
+  const utils = trpc.useUtils();
+  const avisar = useAvisar();
+  const q = trpc.pro.configuracao.useQuery();
+  const [f, setF] = useState<CfgPro | null>(null);
+  const salvar = trpc.pro.salvarConfiguracao.useMutation({ onSuccess: () => { utils.pro.configuracao.invalidate(); setF(null); avisar("Recursos salvos."); } });
+  const v = (f ?? q.data) as CfgPro | undefined;
+  const campos = salvar.error?.data?.zod?.fieldErrors as Record<string, string[]> | undefined;
+  if (q.isLoading || !v) return <Cartao titulo="Recursos do plano Pro"><Erro erro={q.error} /><Carregando /></Cartao>;
+  const r = v.retomada!, c = v.confirmacao!, a = v.reativacao!;
+  const set = (parte: Partial<CfgPro>) => setF({ ...v, ...parte });
+  return (
+    <Cartao titulo="Recursos do plano Pro">
+      <p className="mb-3 text-xs text-slate-500">Mensagens que a clínica envia primeiro, fora da janela de 24h do WhatsApp, só saem com <strong>modelo aprovado pela Meta</strong> (Gerenciador do WhatsApp → Modelos de mensagem). Informe aqui o nome exato de cada modelo aprovado. Tudo começa desligado.</p>
+      <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); salvar.mutate(v); }}>
+        <fieldset className="space-y-2 rounded border border-slate-200 p-3">
+          <legend className="px-1 text-sm font-semibold text-slate-700">Retomada de quem não respondeu</legend>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!r.ativo} onChange={(e) => set({ retomada: { ...r, ativo: e.target.checked } })} /> Ligada</label>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Campo rotulo="1ª mensagem após (horas, dentro de 24h)" type="number" min={1} max={23} value={r.horasPasso1 ?? 20} onChange={(e) => set({ retomada: { ...r, horasPasso1: Number(e.target.value) } })} />
+            <Campo rotulo="2ª mensagem após (horas)" type="number" min={24} max={240} value={r.horasPasso2 ?? 72} onChange={(e) => set({ retomada: { ...r, horasPasso2: Number(e.target.value) } })} />
+            <Campo rotulo="Modelo da 2ª mensagem ({{1}} = nome)" value={r.modeloPasso2 ?? ""} onChange={(e) => set({ retomada: { ...r, modeloPasso2: e.target.value } })} placeholder="retomada_contato" />
+          </div>
+          <AreaTexto rotulo="Texto da 1ª mensagem ({nome} = primeiro nome)" rows={2} maxLength={500} value={r.textoPasso1 ?? ""} onChange={(e) => set({ retomada: { ...r, textoPasso1: e.target.value } })} />
+        </fieldset>
+        <fieldset className="space-y-2 rounded border border-slate-200 p-3">
+          <legend className="px-1 text-sm font-semibold text-slate-700">Confirmação de consultas (véspera)</legend>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!c.ativo} onChange={(e) => set({ confirmacao: { ...c, ativo: e.target.checked } })} /> Ligada</label>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Campo rotulo="Enviar a partir das (hora local)" type="number" min={6} max={21} value={c.horaEnvio ?? 10} onChange={(e) => set({ confirmacao: { ...c, horaEnvio: Number(e.target.value) } })} />
+            <Campo rotulo="Modelo ({{1}} nome, {{2}} data, {{3}} hora, {{4}} procedimento)" value={c.modelo ?? ""} onChange={(e) => set({ confirmacao: { ...c, modelo: e.target.value } })} placeholder="confirmacao_consulta" />
+          </div>
+        </fieldset>
+        <fieldset className="space-y-2 rounded border border-slate-200 p-3">
+          <legend className="px-1 text-sm font-semibold text-slate-700">Reativação de pacientes</legend>
+          <Campo rotulo="Modelo ({{1}} = nome)" value={a.modelo ?? ""} onChange={(e) => set({ reativacao: { ...a, modelo: e.target.value } })} placeholder="reativacao_pacientes" />
+        </fieldset>
+        {campos && <p className="text-xs text-red-700">{Object.values(campos).flat().join(" ")}</p>}
+        <Erro erro={salvar.error} />
+        <Botao carregando={salvar.isPending} disabled={!f}>Salvar</Botao>
+      </form>
+    </Cartao>
+  );
+}
+
 export default function Admin() {
   const gerirUsuarios = usePode("usuarios:gerir");
   const abas = [
-    ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }, { para: "/admin/planos", rotulo: "Planos e preços" }] : []),
+    ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }, { para: "/admin/planos", rotulo: "Planos e preços" }, { para: "/admin/recursos-pro", rotulo: "Recursos Pro" }] : []),
     { para: "/admin/uso", rotulo: "Uso e limites" },
     { para: "/admin/etapas", rotulo: "Pipeline" },
     { para: "/admin/auditoria", rotulo: "Auditoria" },
@@ -313,6 +360,7 @@ export default function Admin() {
         {gerirUsuarios && <Route path="usuarios" element={<Usuarios />} />}
         {gerirUsuarios && <Route path="configuracoes" element={<Configuracoes />} />}
         {gerirUsuarios && <Route path="planos" element={<Planos />} />}
+        {gerirUsuarios && <Route path="recursos-pro" element={<RecursosPro />} />}
         <Route path="uso" element={<UsoLimites />} />
         <Route path="etapas" element={<Etapas />} />
         <Route path="auditoria" element={<Auditoria />} />

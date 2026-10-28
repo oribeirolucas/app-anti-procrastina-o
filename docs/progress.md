@@ -14,6 +14,19 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## Plano Pro liberado (28/10/2026)
+- Migração 0013: `retomada`, `agendamento`, `campanha`, `campanha_destinatario` e `mensagem.origem`.
+  A origem impede que retomada, lembrete ou campanha virem "última resposta" e entrem em laço.
+- Serviços e telas:
+  - `services/recursosProService.ts` (retomada, lembretes, campanhas), executado no ciclo do atendimento;
+  - `router/operacao/pro.ts`;
+  - telas Agenda, Reativação e Relatório mensal, e a aba Recursos Pro em Administração.
+- Verificado:
+  - `npm test` 73/73, estável em 3 rodadas. O novo `pro.test.ts` cobre: janela de 24h, modelo obrigatório, idempotência, parada na resposta, opt-out, humano, lembrete uma vez a partir da hora, resposta cancelando a consulta, importação com erro por linha, campanha bloqueada até o Go e só admin aprovando;
+  - roteiro no navegador cobrindo configuração inválida e válida, importação com prévia, campanha até Aprovações e relatório.
+- Bug encontrado e corrigido: a Agenda mostrava a hora no fuso do navegador e não no da clínica.
+- Oferta: Pro com todas as entregas disponíveis. Rede ainda falta multiunidade e relatório semanal.
+
 ## Oferta estruturada por plano (28/10/2026)
 - `empresa/OFERTA.md` define o que cada plano entrega: promessa, público, franquia, entregas e garantia. Marca **Larc Company** (empresa) e **Recepção IA** (produto).
 - Os planos ganharam promessa, público ideal, franquia e entregas com status disponível ou em breve (migração 0012).

@@ -58,6 +58,9 @@ export const CONTRATO_DE_SAIDA = `Responda SEMPRE no formato estruturado pedido:
 - risco_cancelamento: cliente quer cancelar (descricao = motivo)
 - transferir_humano: precisa de atendimento humano (descricao = motivo)
 - descadastrar: cliente pediu para não receber mais mensagens
+- confirmar_consulta: o paciente confirmou a consulta que aparece em "Consulta agendada" no contexto
+- cancelar_consulta: o paciente não vai à consulta (descricao = motivo, se disse)
+- remarcar_consulta: o paciente quer outro horário (descricao = preferência de dia/horário); a recepção marca o novo horário
 Use null nos campos que não se aplicam.`;
 
 /** Resposta enviada quando a IA falha ou está bloqueada: o cliente nunca fica sem retorno. */

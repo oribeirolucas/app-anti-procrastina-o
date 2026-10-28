@@ -72,3 +72,18 @@ mensagens do cliente como dados (proteção contra prompt injection), nunca pedi
 - Na Vercel (ambiente de teste), a resposta é gerada logo após o webhook e pelo `/tarefas/processar`; função serverless
   pode ser encerrada antes, então a VPS (processo contínuo) é o ambiente indicado para produção.
 - Link de pagamento, envio de mídia e templates fora da janela de 24 h: ainda não.
+
+## Recursos do plano Pro
+Configurados em Administração → Recursos Pro. Rodam no ciclo do atendimento (a cada 30 s na VPS; pelo `/tarefas/processar` no serverless).
+
+| Recurso | Precisa de modelo da Meta? | Regra |
+|---|---|---|
+| Retomada, passo 1 | Não (dentro de 24h) | X horas após nossa última resposta, se o cliente não respondeu e ainda está na janela |
+| Retomada, passo 2 | Sim (`{{1}}` = nome) | Após Y horas. Para se o cliente responder, pedir para parar, for para humano, tiver consulta marcada ou o negócio fechou |
+| Confirmação de consulta | Sim (`{{1}}` nome, `{{2}}` data, `{{3}}` hora, `{{4}}` procedimento) | Na véspera, a partir da hora configurada, uma vez por consulta. A IA interpreta a resposta e atualiza a Agenda |
+| Reativação | Sim (`{{1}}` = nome) | Só após o Go em Aprovações. Lotes de 30 por ciclo. Quem pediu para parar é pulado |
+
+Modelos sugeridos para submeter à Meta na implantação (categoria "Utilidade" para confirmação; "Marketing" para retomada e reativação):
+- `confirmacao_consulta`: "Olá, {{1}}! Passando para confirmar sua consulta de {{4}} em {{2}} às {{3}}. Podemos confirmar?"
+- `retomada_contato`: "Oi, {{1}}! Ficou alguma dúvida sobre o atendimento? Se quiser, te ajudo a escolher um horário."
+- `reativacao_pacientes`: "Oi, {{1}}! Sentimos sua falta por aqui. Quer que eu veja um horário para você?"
