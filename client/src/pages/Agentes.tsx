@@ -9,8 +9,8 @@ type Agente = Saidas["agentes"]["listar"][number];
 const AREAS = { marketing: "Marketing", comercial: "Comercial", cs: "Customer Success", financeiro: "Financeiro" } as const;
 const PROVEDORES = { anthropic: "Claude (Anthropic)", openai: "ChatGPT (OpenAI)", google: "Gemini (Google)" } as const;
 // Sugestões apenas para Claude; para os demais, informe o ID exato da documentação do provedor.
-const MODELOS_SUGERIDOS: Record<string, string[]> = { anthropic: ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"], openai: [], google: [] };
-const vazio = { nome: "", area: "comercial" as keyof typeof AREAS, systemPrompt: "", provedor: "anthropic" as keyof typeof PROVEDORES, modelo: "claude-sonnet-5-5", ativo: false };
+const MODELOS_SUGERIDOS: Record<string, string[]> = { anthropic: ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"], openai: [], google: [] };
+const vazio = { nome: "", area: "comercial" as keyof typeof AREAS, systemPrompt: "", provedor: "anthropic" as keyof typeof PROVEDORES, modelo: "claude-opus-5-5", ativo: false };
 
 function FormAgente({ agente, aoFechar }: { agente: Agente | null; aoFechar: () => void }) {
   const utils = trpc.useUtils();
@@ -73,7 +73,7 @@ export default function Agentes() {
   return (
     <Pagina titulo="Agentes IA" acoes={<Botao onClick={() => setEditando("novo")}><Plus className="h-4 w-4" /> Agente</Botao>}>
       <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        A execução dos agentes ainda não está ligada: aqui você já define a função, o prompt e o modelo de cada um. Eles passam a operar quando a chave do provedor for configurada no servidor.
+        Os agentes respondem o WhatsApp sozinhos quando estão ativos e o servidor tem a chave do provedor (ANTHROPIC_API_KEY). Hoje só o Claude está integrado: agentes com ChatGPT ou Gemini caem na mensagem padrão e passam o cliente para um humano.
       </p>
       <Erro erro={q.error} tentar={() => q.refetch()} />
       {q.isLoading ? <Carregando /> : !q.data?.length ? (

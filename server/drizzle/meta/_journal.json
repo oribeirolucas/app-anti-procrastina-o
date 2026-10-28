@@ -71,6 +71,13 @@
       "when": 1793196751719,
       "tag": "0009_operacao_agentes",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793198061033,
+      "tag": "0010_atendimento_ia",
+      "breakpoints": true
     }
   ]
 }

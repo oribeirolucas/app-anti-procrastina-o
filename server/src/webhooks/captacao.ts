@@ -26,7 +26,7 @@ export const leadSchema = z
   .refine((d) => d.email || d.telefone, "Informe e-mail ou telefone.");
 type Lead = z.infer<typeof leadSchema>;
 
-function lerCorpo(req: IncomingMessage): Promise<Buffer> {
+export function lerCorpo(req: IncomingMessage): Promise<Buffer> {
   return new Promise((ok, falha) => {
     const partes: Buffer[] = [];
     let total = 0;
@@ -40,12 +40,12 @@ function lerCorpo(req: IncomingMessage): Promise<Buffer> {
   });
 }
 
-const json = (res: ServerResponse, status: number, corpo: unknown, extras: Record<string, string> = {}) =>
+export const json = (res: ServerResponse, status: number, corpo: unknown, extras: Record<string, string> = {}) =>
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", ...extras }).end(JSON.stringify(corpo));
 
 export const assinar = (segredo: string, corpo: Buffer | string) => "sha256=" + createHmac("sha256", segredo).update(corpo).digest("hex");
 
-function assinaturaValida(segredo: string, corpo: Buffer, recebida: string | undefined) {
+export function assinaturaValida(segredo: string, corpo: Buffer, recebida: string | undefined) {
   if (!recebida) return false;
   const esperada = Buffer.from(assinar(segredo, corpo));
   const veio = Buffer.from(recebida.trim());

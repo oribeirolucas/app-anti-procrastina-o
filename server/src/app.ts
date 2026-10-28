@@ -9,6 +9,8 @@ import { env } from "./lib/env.js";
 import { pool } from "./db/index.js";
 import { log } from "./lib/log.js";
 import { rotaWebhooks } from "./webhooks/captacao.js";
+import { criarRotaWhatsApp } from "./webhooks/whatsapp.js";
+import { dispararAtendimento } from "./services/container.js";
 import { executarCiclo } from "./automacoes/motor.js";
 import { timingSafeEqual } from "node:crypto";
 
@@ -18,7 +20,7 @@ const PASTA_CLIENT = path.resolve(process.env.PASTA_CLIENT ?? "../client/dist");
 const TIPOS: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json" };
 
 export type Rota = (req: http.IncomingMessage, res: http.ServerResponse) => Promise<boolean>;
-const rotasExtras: Rota[] = [];
+const rotasExtras: Rota[] = [criarRotaWhatsApp(() => void dispararAtendimento())];
 export const registrarRota = (r: Rota) => rotasExtras.push(r);
 
 function cabecalhosSeguranca(res: http.ServerResponse) {
@@ -69,6 +71,7 @@ export async function tratarRequisicao(req: http.IncomingMessage, res: http.Serv
         const veio = Buffer.from(String(req.headers.authorization ?? ""));
         if (!env.segredoCron || esperado.length !== veio.length || !timingSafeEqual(esperado, veio)) { res.writeHead(404).end(); return; }
         const r = await executarCiclo();
+        await dispararAtendimento(); // retoma respostas da IA que ficaram pendentes (ex.: função serverless encerrada)
         log("info", "automacao.ciclo_agendado", { reqId, ...r });
         res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(r));
         return;

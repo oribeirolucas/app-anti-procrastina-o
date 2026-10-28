@@ -14,6 +14,24 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## Motor de atendimento autônomo (28/10/2026)
+- Arquivos novos:
+  - `webhooks/whatsapp.ts`;
+  - `services/{contextService, agentRouter, llmService, whatsappService, atendimentoService, container}.ts`;
+  - `config/prompts.ts`;
+  - migração 0010 (fila e trava nas mensagens e conversas).
+- LLM: SDK oficial `@anthropic-ai/sdk`, com saída estruturada validada por Zod e fallback do servidor em caso de recusa. Modelo padrão `claude-opus-5-5`.
+- Verificado com `npm test` 63/63, estável em 5 rodadas seguidas. O novo `atendimento.test.ts` usa dublês para LLM e WhatsApp e cobre:
+  - roteador;
+  - webhook: lead novo, mensagem duplicada, assinatura e verificação da Meta;
+  - memória com 15 mensagens;
+  - SDR qualificando e movendo de etapa;
+  - Closer: 8% passa e 20% vira aprovação;
+  - IA fora do ar cai no fallback e passa para humano;
+  - franquia bloqueada;
+  - concorrência.
+- Não verificado (depende de credenciais): chamada real ao Claude e envio real pela Meta.
+
 ## Operação por IA: 5 módulos (28/10/2026)
 - Barra lateral com ícones (lucide-react) e grupos: Comercial, Operação por IA e Gestão.
 - Telas novas:

@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { like } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "../src/db/index.js";
-import { notificacao } from "../src/db/schema.js";
+import { consumoUso, notificacao } from "../src/db/schema.js";
 import { registrarConsumo, verificarLimite } from "../src/lib/consumo.js";
 import { chamadorComo, prepararBase } from "./utils.js";
 
@@ -10,7 +10,11 @@ const codigo = async (p: Promise<unknown>) => {
   try { await p; return "OK"; } catch (e) { return (e as TRPCError).code; }
 };
 
-beforeAll(prepararBase);
+beforeAll(async () => {
+  await prepararBase();
+  // Os testes de atendimento também registram consumo no mês: começa do zero para contar só o deste arquivo
+  await db.delete(consumoUso);
+});
 
 describe("consumo e franquia", () => {
   it("só admin define limites; gestor vê o uso; operador não vê", async () => {

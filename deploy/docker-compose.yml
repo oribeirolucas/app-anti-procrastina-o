@@ -36,6 +36,12 @@ services:
       ADMIN_SENHA: ${ADMIN_SENHA:-}
       CRON_SECRET: ${CRON_SECRET:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MODELO_IA_PADRAO: ${MODELO_IA_PADRAO:-claude-opus-5-5}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      WHATSAPP_GRAPH_VERSAO: ${WHATSAPP_GRAPH_VERSAO:-v21.0}
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }

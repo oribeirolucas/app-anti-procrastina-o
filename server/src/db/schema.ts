@@ -131,7 +131,12 @@ export const contato = pgTable(
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
-  (t) => [index("contato_empresa_idx").on(t.empresaId), uniqueIndex("contato_email_uq").on(t.email).where(sql`email is not null`)],
+  (t) => [
+    index("contato_empresa_idx").on(t.empresaId),
+    uniqueIndex("contato_email_uq").on(t.email).where(sql`email is not null`),
+    // Busca do contato pelo número que chega no WhatsApp (só dígitos, com DDI)
+    index("contato_telefone_idx").on(t.telefone),
+  ],
 );
 
 export const etapaPipeline = pgTable("etapa_pipeline", {
@@ -572,6 +577,8 @@ export const conversa = pgTable(
     contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
     agenteId: uuid("agente_id").references(() => agente.id, { onDelete: "set null" }),
     situacao: varchar("situacao", { length: 10 }).notNull().default("ia"), // ia | humano | encerrada
+    // Trava de processamento (lease): só um processo responde a conversa por vez; expira sozinha se ele cair
+    processandoAte: timestamp("processando_ate", { withTimezone: true }),
     ultimaMensagemEm: timestamp("ultima_mensagem_em", { withTimezone: true }),
     criadoEm: criadoEm(),
   },
@@ -592,10 +599,17 @@ export const mensagem = pgTable(
     autor: varchar("autor", { length: 8 }).notNull(), // cliente | ia | humano
     texto: text("texto").notNull(),
     idExterno: varchar("id_externo", { length: 120 }), // id da mensagem no canal (idempotência do webhook)
+    // Fila de atendimento: mensagem do cliente ainda sem resposta da IA (processada_em nulo)
+    processadaEm: timestamp("processada_em", { withTimezone: true }),
+    tentativas: integer("tentativas").notNull().default(0),
+    // Saída para o canal: quando foi entregue à API do WhatsApp, ou por que não foi
+    enviadaEm: timestamp("enviada_em", { withTimezone: true }),
+    erroEnvio: varchar("erro_envio", { length: 300 }),
     criadoEm: criadoEm(),
   },
   (t) => [
     index("mensagem_conversa_idx").on(t.conversaId, t.criadoEm),
+    index("mensagem_fila_idx").on(t.autor, t.processadaEm).where(sql`processada_em is null`),
     uniqueIndex("mensagem_externo_uq").on(t.conversaId, t.idExterno),
     check("mensagem_autor_ck", sql`${t.autor} in ('cliente','ia','humano')`),
   ],
