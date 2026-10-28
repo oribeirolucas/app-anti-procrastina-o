@@ -484,3 +484,119 @@ export const consumoUso = pgTable(
     check("consumo_quantidade_ck", sql`${t.quantidade} > 0`),
   ],
 );
+
+// ───────────────────────── Operação por agentes de IA ─────────────────────────
+
+// Configuração de cada agente autônomo. O prompt é versionado (concorrência otimista) e auditado.
+export const agente = pgTable(
+  "agente",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 80 }).notNull(),
+    area: varchar("area", { length: 20 }).notNull(), // marketing | comercial | cs | financeiro
+    systemPrompt: text("system_prompt").notNull().default(""),
+    provedor: varchar("provedor", { length: 12 }).notNull().default("anthropic"), // anthropic | openai | google
+    modelo: varchar("modelo", { length: 60 }).notNull(),
+    ativo: boolean("ativo").notNull().default(false),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex("agente_nome_uq").on(sql`lower(${t.nome})`),
+    check("agente_area_ck", sql`${t.area} in ('marketing','comercial','cs','financeiro')`),
+    check("agente_provedor_ck", sql`${t.provedor} in ('anthropic','openai','google')`),
+  ],
+);
+
+// Log de cada execução de um agente (o que fez, consumo e falhas).
+export const execucaoAgente = pgTable(
+  "execucao_agente",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agenteId: uuid("agente_id")
+      .notNull()
+      .references(() => agente.id, { onDelete: "cascade" }),
+    situacao: varchar("situacao", { length: 12 }).notNull(), // ok | erro | bloqueada
+    resumo: varchar("resumo", { length: 300 }).notNull(),
+    tokensEntrada: integer("tokens_entrada").notNull().default(0),
+    tokensSaida: integer("tokens_saida").notNull().default(0),
+    erro: text("erro"),
+    duracaoMs: integer("duracao_ms"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    index("exec_agente_idx").on(t.agenteId, t.criadoEm),
+    check("exec_agente_situacao_ck", sql`${t.situacao} in ('ok','erro','bloqueada')`),
+  ],
+);
+
+// Decisões que os agentes não podem tomar sozinhos (governança): orçamento, desconto, deploy...
+export const solicitacaoAprovacao = pgTable(
+  "solicitacao_aprovacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tipo: varchar("tipo", { length: 12 }).notNull(), // orcamento | desconto | deploy | outro
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    descricao: text("descricao"),
+    valor: dinheiro("valor"),
+    agenteId: uuid("agente_id").references(() => agente.id, { onDelete: "set null" }),
+    // Chave de idempotência do solicitante: o mesmo pedido não entra duas vezes na fila
+    referencia: varchar("referencia", { length: 200 }).notNull(),
+    situacao: varchar("situacao", { length: 10 }).notNull().default("pendente"), // pendente | aprovada | recusada
+    decididoPorId: uuid("decidido_por_id").references(() => usuario.id, { onDelete: "set null" }),
+    decididoEm: timestamp("decidido_em", { withTimezone: true }),
+    motivoDecisao: varchar("motivo_decisao", { length: 300 }),
+    versao: versao(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex("aprovacao_referencia_uq").on(t.referencia),
+    index("aprovacao_situacao_idx").on(t.situacao, t.criadoEm),
+    check("aprovacao_tipo_ck", sql`${t.tipo} in ('orcamento','desconto','deploy','outro')`),
+    check("aprovacao_situacao_ck", sql`${t.situacao} in ('pendente','aprovada','recusada')`),
+    // Decidida ⇔ tem quem e quando decidiu; recusa exige motivo
+    check("aprovacao_decisao_ck", sql`(${t.situacao} = 'pendente') = (${t.decididoEm} is null)`),
+    check("aprovacao_recusa_ck", sql`${t.situacao} <> 'recusada' or ${t.motivoDecisao} is not null`),
+  ],
+);
+
+// Conversas de canais externos (WhatsApp) e suas mensagens, para auditoria do atendimento.
+export const conversa = pgTable(
+  "conversa",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    canal: varchar("canal", { length: 12 }).notNull().default("whatsapp"),
+    idExterno: varchar("id_externo", { length: 120 }).notNull(), // id do contato no canal
+    nomeExibicao: varchar("nome_exibicao", { length: 120 }),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    agenteId: uuid("agente_id").references(() => agente.id, { onDelete: "set null" }),
+    situacao: varchar("situacao", { length: 10 }).notNull().default("ia"), // ia | humano | encerrada
+    ultimaMensagemEm: timestamp("ultima_mensagem_em", { withTimezone: true }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex("conversa_canal_externo_uq").on(t.canal, t.idExterno),
+    index("conversa_ultima_idx").on(t.situacao, t.ultimaMensagemEm),
+    check("conversa_situacao_ck", sql`${t.situacao} in ('ia','humano','encerrada')`),
+  ],
+);
+
+export const mensagem = pgTable(
+  "mensagem",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversaId: uuid("conversa_id")
+      .notNull()
+      .references(() => conversa.id, { onDelete: "cascade" }),
+    autor: varchar("autor", { length: 8 }).notNull(), // cliente | ia | humano
+    texto: text("texto").notNull(),
+    idExterno: varchar("id_externo", { length: 120 }), // id da mensagem no canal (idempotência do webhook)
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    index("mensagem_conversa_idx").on(t.conversaId, t.criadoEm),
+    uniqueIndex("mensagem_externo_uq").on(t.conversaId, t.idExterno),
+    check("mensagem_autor_ck", sql`${t.autor} in ('cliente','ia','humano')`),
+  ],
+);

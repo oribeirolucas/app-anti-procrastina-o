@@ -56,3 +56,28 @@ o setup. Os índices únicos `lanc_mensalidade_uq` (contrato + competência) e `
 | Cancelados no mês | contratos com `cancelado_em` a partir do dia 1 do mês atual. Receita perdida = Σ `valor_mensal` deles |
 | Vendas sem contrato | oportunidades `ganha`, não arquivadas, sem contrato com `oportunidade_id` apontando para elas |
 | Por contrato | faturado = Σ cobranças não canceladas · recebido = Σ `valor_pago` pagas · em atraso = pendentes vencidas |
+
+## Marketing (aquisição)
+
+| Indicador | Fórmula |
+|---|---|
+| Investimento | Σ `valor_pago` das despesas **pagas** na categoria "Marketing", com `pago_em` no período |
+| Leads | oportunidades criadas no período (por origem) |
+| Novos clientes | empresas distintas com contrato de `inicio` no período |
+| CPL | investimento ÷ leads (— quando não há leads) |
+| CAC | investimento ÷ novos clientes (— quando não há novos clientes) |
+| Gasto médio diário | investimento ÷ dias do período. Comparado ao orçamento diário configurado |
+
+## Customer Success (health score)
+
+Calculado por regras auditáveis, para cada empresa com contrato `ativo`. Começa em 100 e desconta:
+
+| Sinal | Desconto |
+|---|---|
+| Cobrança de receita pendente com vencimento antes de hoje | −30 |
+| Último contato (interação que não seja "alteração") há mais de 60 dias | −35 |
+| Último contato há 31–60 dias, ou nenhum contato registrado | −20 |
+| Tarefa da empresa não concluída e vencida | −15 |
+| Contrato termina em até 30 dias (ou já venceu) | −15 |
+
+Risco: alto < 50 ≤ médio < 75 ≤ baixo. MRR em risco = Σ MRR dos clientes de risco alto.

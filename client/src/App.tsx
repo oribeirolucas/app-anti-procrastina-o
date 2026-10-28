@@ -17,18 +17,32 @@ import Admin from "./pages/Admin";
 import Financeiro from "./pages/Financeiro";
 import Automacoes from "./pages/Automacoes";
 import { Sino } from "./components/Sino";
+import Aprovacoes from "./pages/Aprovacoes";
+import Agentes from "./pages/Agentes";
+import Inbox from "./pages/Inbox";
+import Marketing from "./pages/Marketing";
+import Sucesso from "./pages/Sucesso";
+import {
+  Bot, Building2, FileSignature, HeartPulse, KanbanSquare, LayoutDashboard, ListChecks, Megaphone, MessagesSquare, Settings, ShieldCheck, Users, Wallet, Workflow,
+  type LucideIcon,
+} from "lucide-react";
 
-type ItemMenu = { para: string; rotulo: string; permissao?: Eu["permissoes"][number] };
+type ItemMenu = { para: string; rotulo: string; icone: LucideIcon; permissao?: Eu["permissoes"][number]; grupo?: string };
 const MENU: ItemMenu[] = [
-  { para: "/", rotulo: "Painel" },
-  { para: "/pipeline", rotulo: "Pipeline" },
-  { para: "/empresas", rotulo: "Empresas" },
-  { para: "/contatos", rotulo: "Contatos" },
-  { para: "/tarefas", rotulo: "Tarefas" },
-  { para: "/contratos", rotulo: "Contratos" },
-  { para: "/financeiro", rotulo: "Financeiro", permissao: "financeiro:ler" },
-  { para: "/automacoes", rotulo: "Automações", permissao: "automacoes:ler" },
-  { para: "/admin", rotulo: "Administração", permissao: "auditoria:ver" },
+  { para: "/", rotulo: "Painel", icone: LayoutDashboard },
+  { para: "/aprovacoes", rotulo: "Aprovações", icone: ShieldCheck, permissao: "aprovacoes:ver" },
+  { para: "/pipeline", rotulo: "Pipeline", icone: KanbanSquare, grupo: "Comercial" },
+  { para: "/empresas", rotulo: "Empresas", icone: Building2 },
+  { para: "/contatos", rotulo: "Contatos", icone: Users },
+  { para: "/tarefas", rotulo: "Tarefas", icone: ListChecks },
+  { para: "/contratos", rotulo: "Contratos", icone: FileSignature },
+  { para: "/marketing", rotulo: "Marketing", icone: Megaphone, permissao: "marketing:ver" },
+  { para: "/sucesso", rotulo: "Customer Success", icone: HeartPulse },
+  { para: "/inbox", rotulo: "Inbox WhatsApp", icone: MessagesSquare, permissao: "agente:atender", grupo: "Operação por IA" },
+  { para: "/agentes", rotulo: "Agentes IA", icone: Bot, permissao: "agente:gerir" },
+  { para: "/automacoes", rotulo: "Automações", icone: Workflow, permissao: "automacoes:ler" },
+  { para: "/financeiro", rotulo: "Financeiro", icone: Wallet, permissao: "financeiro:ler", grupo: "Gestão" },
+  { para: "/admin", rotulo: "Administração", icone: Settings, permissao: "auditoria:ver" },
 ];
 
 function Layout({ eu }: { eu: Eu }) {
@@ -44,10 +58,14 @@ function Layout({ eu }: { eu: Eu }) {
         <div className="hidden px-4 py-4 text-base font-semibold text-indigo-700 md:block">{nome}</div>
         <nav className="flex flex-col gap-0.5 px-2 pb-3">
           {itens.map((m) => (
-            <NavLink key={m.para} to={m.para} end={m.para === "/"} onClick={() => setMenuAberto(false)}
-              className={({ isActive }) => `rounded-md px-3 py-2 text-sm ${isActive ? "bg-indigo-50 font-medium text-indigo-700" : "text-slate-600 hover:bg-slate-100"}`}>
-              {m.rotulo}
-            </NavLink>
+            <div key={m.para}>
+              {m.grupo && <div className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{m.grupo}</div>}
+              <NavLink to={m.para} end={m.para === "/"} onClick={() => setMenuAberto(false)}
+                className={({ isActive }) => `flex items-center gap-2.5 rounded-md px-3 py-2 text-sm ${isActive ? "bg-indigo-50 font-medium text-indigo-700" : "text-slate-600 hover:bg-slate-100"}`}>
+                <m.icone className="h-4 w-4 shrink-0" aria-hidden />
+                {m.rotulo}
+              </NavLink>
+            </div>
           ))}
         </nav>
       </aside>
@@ -70,6 +88,11 @@ function Layout({ eu }: { eu: Eu }) {
             <Route path="/oportunidades/:id" element={<OportunidadeDetalhe />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/contratos" element={<Contratos />} />
+            <Route path="/sucesso" element={<Sucesso />} />
+            {eu.permissoes.includes("aprovacoes:ver") && <Route path="/aprovacoes" element={<Aprovacoes />} />}
+            {eu.permissoes.includes("agente:gerir") && <Route path="/agentes" element={<Agentes />} />}
+            {eu.permissoes.includes("agente:atender") && <Route path="/inbox" element={<Inbox />} />}
+            {eu.permissoes.includes("marketing:ver") && <Route path="/marketing" element={<Marketing />} />}
             {eu.permissoes.includes("automacoes:ler") && <Route path="/automacoes/*" element={<Automacoes />} />}
             {eu.permissoes.includes("financeiro:ler") && <Route path="/financeiro/*" element={<Financeiro />} />}
             {eu.permissoes.includes("auditoria:ver") && <Route path="/admin/*" element={<Admin />} />}

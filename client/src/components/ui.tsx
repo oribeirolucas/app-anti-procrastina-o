@@ -129,6 +129,9 @@ const cores: Record<string, string> = {
   aberta: "bg-sky-100 text-sky-700", ganha: "bg-emerald-100 text-emerald-700", perdida: "bg-slate-200 text-slate-600",
   ativo: "bg-emerald-100 text-emerald-700", suspenso: "bg-amber-100 text-amber-700", cancelado: "bg-slate-200 text-slate-600",
   admin: "bg-purple-100 text-purple-700", gestor: "bg-indigo-100 text-indigo-700", operador: "bg-slate-100 text-slate-700",
+  pendente: "bg-amber-100 text-amber-700", aprovada: "bg-emerald-100 text-emerald-700", recusada: "bg-red-100 text-red-700",
+  alto: "bg-red-100 text-red-700", medio: "bg-amber-100 text-amber-700", baixo: "bg-emerald-100 text-emerald-700",
+  ia: "bg-violet-100 text-violet-700", humano: "bg-sky-100 text-sky-700", encerrada: "bg-slate-200 text-slate-600",
 };
 export function Etiqueta({ valor, texto }: { valor: string; texto?: string }) {
   return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cores[valor] ?? "bg-slate-100 text-slate-700"}`}>{texto ?? valor}</span>;

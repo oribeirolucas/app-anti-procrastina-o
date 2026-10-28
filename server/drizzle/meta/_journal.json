@@ -64,6 +64,13 @@
       "when": 1793194533453,
       "tag": "0008_consumo_franquia",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793196751719,
+      "tag": "0009_operacao_agentes",
+      "breakpoints": true
     }
   ]
 }

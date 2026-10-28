@@ -16,7 +16,10 @@ Fonte única: `server/src/auth/permissoes.ts`. A tela Administração → Usuár
 | contratos:escrever | ✓ | ✓ | | registrar e alterar contratos |
 | financeiro:ler / financeiro:escrever | ✓ | ✓ | | módulo financeiro (etapa 3) |
 | automacoes:ler / automacoes:gerir | ✓ | ✓ | | automações (etapa 4) |
-| agente:gerir | ✓ | ✓ | | base de conhecimento e regras do agente (etapa 5) |
-| agente:atender | ✓ | ✓ | ✓ | assumir conversas transferidas pelo agente |
+| agente:gerir | ✓ | ✓ | | Agentes IA: system prompt, LLM e modelo (alterações auditadas com antes/depois) e logs de execução |
+| agente:atender | ✓ | ✓ | ✓ | Inbox WhatsApp (auditoria das conversas) e assumir conversas transferidas |
+| aprovacoes:ver | ✓ | ✓ | | fila de Aprovações (governança) |
+| aprovacoes:decidir | ✓ | | | dar Go/No-Go nas solicitações dos agentes (recusa exige motivo) |
+| marketing:ver | ✓ | ✓ | | painel de Marketing (CPL, CAC, orçamento diário). Definir o orçamento exige config:gerir |
 
 Regra extra: o sistema impede remover ou desativar o último administrador ativo.

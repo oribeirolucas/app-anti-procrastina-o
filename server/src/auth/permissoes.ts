@@ -20,6 +20,10 @@ export const PERMISSOES = {
   "automacoes:gerir": ["admin", "gestor"],
   "agente:gerir": ["admin", "gestor"],
   "agente:atender": ["admin", "gestor", "operador"],
+  // Governança: o estrategista (admin) decide; o gestor acompanha a fila
+  "aprovacoes:ver": ["admin", "gestor"],
+  "aprovacoes:decidir": ["admin"],
+  "marketing:ver": ["admin", "gestor"],
 } as const satisfies Record<string, readonly Perfil[]>;
 
 export type Permissao = keyof typeof PERMISSOES;

@@ -14,6 +14,22 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## Operação por IA: 5 módulos (28/10/2026)
+- Barra lateral com ícones (lucide-react) e grupos: Comercial, Operação por IA e Gestão.
+- Telas novas:
+  - Aprovações: Go/No-Go;
+  - Agentes IA: cards, edição de prompt e LLM, logs;
+  - Inbox WhatsApp: conversas lado a lado;
+  - Marketing: CPL, CAC e orçamento diário;
+  - Customer Success: health score e alertas.
+- Banco: migração 0009 (`agente`, `execucao_agente`, `solicitacao_aprovacao`, `conversa`, `mensagem`), com CHECKs e índices de idempotência.
+- Verificado:
+  - `npm test` 53/53 (novo `operacao.test.ts`);
+  - roteiro no navegador cobrindo as 5 telas: No-Go com motivo obrigatório, edição de agente, inbox e celular sem rolagem lateral;
+  - E2E antigos OK.
+- O que ainda não gera dados: execução dos agentes (falta a chave do provedor), WhatsApp (falta a API da Meta) e chamados de suporte.
+  As telas mostram isso com aviso explícito, sem dados fictícios.
+
 ## Instalação por cliente (28/10/2026)
 - `Dockerfile` (front-end e API numa imagem, ~395 MB) e `deploy/docker-compose.yml`: app, PostgreSQL 16 sem porta exposta, Caddy com HTTPS automático e serviço de backup diário.
 - Scripts em `deploy/scripts/`: backup-agora, testar-restauracao, restaurar (com backup de segurança e confirmação) e atualizar (backup, build e checagem de saúde).
