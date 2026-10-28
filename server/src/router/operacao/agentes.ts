@@ -8,7 +8,8 @@ import { conflitoDeVersao } from "../../lib/integridade.js";
 import { comPermissao, router } from "../trpc.js";
 
 export const AREAS = ["marketing", "comercial", "cs", "financeiro"] as const;
-export const PROVEDORES = ["anthropic", "openai", "google"] as const;
+// Agentes conversam com Claude. A OpenAI entra só na transcrição de áudio (não é escolhível aqui).
+export const PROVEDORES = ["anthropic"] as const;
 
 const dados = z.object({
   nome: z.string().trim().min(2, "Informe o nome.").max(80),

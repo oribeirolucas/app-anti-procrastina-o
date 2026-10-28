@@ -11,6 +11,8 @@ import { processarConversa, processarFila, type DepsAtendimento } from "../src/s
 import { buscarContextoCRM, buscarHistorico, formatarContexto } from "../src/services/contextService.js";
 import { ErroLLM, type PedidoLLM, type ProvedorLLM, type SaidaAgente } from "../src/services/llmService.js";
 import { WhatsAppDesligado } from "../src/services/whatsappService.js";
+import { ErroTranscricao, type Transcritor } from "../src/services/transcricaoService.js";
+import { consumoUso } from "../src/db/schema.js";
 import { extrairMensagens, registrarMensagemRecebida } from "../src/webhooks/whatsapp.js";
 import { chamadorComo, prepararBase } from "./utils.js";
 
@@ -32,10 +34,24 @@ const payload = (tel: string, texto: string, id = `wamid.${tel}.${seq++}`, nome 
   object: "whatsapp_business_account",
   entry: [{ changes: [{ field: "messages", value: { contacts: [{ wa_id: tel, profile: { name: nome } }], messages: [{ from: tel, id, timestamp: String(Math.floor(Date.now() / 1000)), type: "text", text: { body: texto } }] } }] }],
 });
-function deps(llm: ProvedorLLM) {
-  const canal = new WhatsAppDesligado("teste");
-  return { canal, d: { provedores: { anthropic: llm }, canal, modeloPadrao: "claude-opus-5-5" } satisfies DepsAtendimento };
+/** Transcritor de mentira: devolve o texto programado (ou falha) e guarda o que recebeu. */
+class TranscritorFalso implements Transcritor {
+  recebidos: { bytes: number; mime: string }[] = [];
+  constructor(public texto: string | Error = "quero saber o preço do plano") {}
+  async transcrever(audio: Buffer, mime: string) {
+    this.recebidos.push({ bytes: audio.length, mime });
+    if (this.texto instanceof Error) throw this.texto;
+    return { texto: this.texto, segundos: 7 };
+  }
 }
+function deps(llm: ProvedorLLM, transcritor: Transcritor = new TranscritorFalso()) {
+  const canal = new WhatsAppDesligado("teste");
+  return { canal, d: { provedores: { anthropic: llm }, canal, transcritor, modeloPadrao: "claude-opus-5-5" } satisfies DepsAtendimento };
+}
+const payloadAudio = (tel: string, midiaId: string) => ({
+  object: "whatsapp_business_account",
+  entry: [{ changes: [{ field: "messages", value: { contacts: [{ wa_id: tel, profile: { name: "Cliente Áudio" } }], messages: [{ from: tel, id: `wamid.audio.${midiaId}`, timestamp: String(Math.floor(Date.now() / 1000)), type: "audio", audio: { id: midiaId, mime_type: "audio/ogg; codecs=opus" } }] } }] }],
+});
 async function ativarAgentes() {
   for (const area of ["marketing", "comercial", "cs"] as const) {
     const [a] = await db.select().from(agente).where(eq(agente.area, area)).limit(1);
@@ -209,6 +225,36 @@ describe("atendimento", () => {
     } finally {
       await a.admin.salvarLimites({ ia_conversa: null, ia_tokens: null, whatsapp_conversa: null, bloquearAoAtingir: false });
     }
+  });
+
+  it("áudio: ChatGPT transcreve, Claude responde com base no texto, consumo registrado", async () => {
+    await ativarAgentes();
+    const tel = telefone();
+    const r = await registrarMensagemRecebida(extrairMensagens(payloadAudio(tel, "midia-ok"))[0]);
+    const llm = new LLMFalso({ resposta: "Claro! Me conta quantos atendimentos vocês fazem por mês?", acoes: [] });
+    const transcritor = new TranscritorFalso("quero saber o preço do plano");
+    const { canal, d } = deps(llm, transcritor);
+    canal.midias.set("midia-ok", { dados: Buffer.alloc(14_000, 1), mime: "audio/ogg; codecs=opus" });
+    await processarConversa(r.conversaId, d);
+    expect(transcritor.recebidos).toEqual([{ bytes: 14_000, mime: "audio/ogg; codecs=opus" }]);
+    const [m] = await db.select().from(mensagem).where(and(eq(mensagem.conversaId, r.conversaId), eq(mensagem.autor, "cliente")));
+    expect(m.texto).toBe("[áudio transcrito] quero saber o preço do plano");
+    expect(m.transcritaEm).not.toBeNull();
+    expect(llm.pedidos[0].historico.at(-1)).toEqual({ papel: "cliente", texto: "[áudio transcrito] quero saber o preço do plano" });
+    expect(canal.enviados.at(-1)?.texto).toContain("quantos atendimentos");
+    const [c] = await db.select().from(consumoUso).where(and(eq(consumoUso.recurso, "transcricao_segundos"), eq(consumoUso.referencia, m.id)));
+    expect(c.quantidade).toBe(7);
+  });
+
+  it("áudio que não transcreve: o agente responde pedindo texto (cliente não fica sem resposta)", async () => {
+    await ativarAgentes();
+    const r = await registrarMensagemRecebida(extrairMensagens(payloadAudio(telefone(), "midia-falha"))[0]);
+    const llm = new LLMFalso({ resposta: "Não consegui ouvir seu áudio, pode escrever?", acoes: [] });
+    const { canal, d } = deps(llm, new TranscritorFalso(new ErroTranscricao("OpenAI indisponível (503)", true)));
+    canal.midias.set("midia-falha", { dados: Buffer.alloc(100), mime: "audio/ogg" });
+    await processarConversa(r.conversaId, d);
+    expect(llm.pedidos[0].historico.at(-1)?.texto).toContain("não pôde ser transcrito");
+    expect(canal.enviados.at(-1)?.texto).toBe("Não consegui ouvir seu áudio, pode escrever?");
   });
 
   it("duas execuções em paralelo respondem a conversa uma vez só", async () => {

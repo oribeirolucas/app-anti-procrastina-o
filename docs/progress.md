@@ -14,6 +14,12 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## Transcrição de áudio com ChatGPT (28/10/2026)
+- O Claude conversa e o ChatGPT transcreve. Agentes só aceitam Claude.
+- O áudio do WhatsApp é baixado da Meta e transcrito pela OpenAI (SDK oficial `openai`, modelo `gpt-4o-transcribe` configurável) antes do agente responder.
+- Migração 0011: colunas de mídia na mensagem e recurso `transcricao_segundos` na franquia.
+- Verificado: `npm test` 65/65, com 2 cenários novos (áudio transcrito e respondido; falha de transcrição com o agente pedindo texto).
+
 ## Motor de atendimento autônomo (28/10/2026)
 - Arquivos novos:
   - `webhooks/whatsapp.ts`;

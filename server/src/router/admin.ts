@@ -132,6 +132,8 @@ export const adminRouter = router({
         ia_conversa: z.number().int().min(0).max(10_000_000).nullable(),
         ia_tokens: z.number().int().min(0).max(10_000_000_000).nullable(),
         whatsapp_conversa: z.number().int().min(0).max(10_000_000).nullable(),
+        // Opcional para manter compatível quem ainda não envia este campo
+        transcricao_segundos: z.number().int().min(0).max(1_000_000_000).nullable().default(null),
         bloquearAoAtingir: z.boolean(),
       }),
     )

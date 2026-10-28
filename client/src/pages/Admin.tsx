@@ -210,7 +210,7 @@ function Planos() {
   );
 }
 
-type Limites = { ia_conversa: string; ia_tokens: string; whatsapp_conversa: string; bloquearAoAtingir: boolean };
+type Limites = { ia_conversa: string; ia_tokens: string; whatsapp_conversa: string; transcricao_segundos: string; bloquearAoAtingir: boolean };
 const numOuNulo = (v: string) => (v.trim() === "" ? null : Number(v.replace(/\D/g, "")));
 
 function UsoLimites() {
@@ -232,7 +232,7 @@ function UsoLimites() {
     <Cartao titulo={`Uso do mês${q.data ? ` (${mes}/${ano})` : ""}`}>
       <Erro erro={q.error} tentar={() => q.refetch()} />
       {q.isLoading ? <Carregando /> : q.data && (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {q.data.recursos.map((r) => {
             const pct = r.percentual === null ? null : Math.min(r.percentual, 1);
             const cor = r.percentual === null ? "bg-slate-300" : r.percentual >= 1 ? "bg-red-600" : r.percentual >= 0.8 ? "bg-amber-500" : "bg-emerald-600";
@@ -256,13 +256,14 @@ function UsoLimites() {
       {gerir && v && (
         <form className="mt-4 space-y-3 border-t border-slate-100 pt-4" onSubmit={(e) => {
           e.preventDefault();
-          salvar.mutate({ ia_conversa: numOuNulo(v.ia_conversa), ia_tokens: numOuNulo(v.ia_tokens), whatsapp_conversa: numOuNulo(v.whatsapp_conversa), bloquearAoAtingir: v.bloquearAoAtingir });
+          salvar.mutate({ ia_conversa: numOuNulo(v.ia_conversa), ia_tokens: numOuNulo(v.ia_tokens), whatsapp_conversa: numOuNulo(v.whatsapp_conversa), transcricao_segundos: numOuNulo(v.transcricao_segundos), bloquearAoAtingir: v.bloquearAoAtingir });
         }}>
           <h4 className="text-sm font-semibold text-slate-700">Franquia mensal desta instalação</h4>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <Campo rotulo="Conversas com IA" inputMode="numeric" placeholder="vazio = sem limite" value={v.ia_conversa} onChange={(e) => setF({ ...v, ia_conversa: e.target.value })} />
             <Campo rotulo="Tokens de IA" inputMode="numeric" placeholder="vazio = sem limite" value={v.ia_tokens} onChange={(e) => setF({ ...v, ia_tokens: e.target.value })} />
             <Campo rotulo="Conversas no WhatsApp" inputMode="numeric" placeholder="vazio = sem limite" value={v.whatsapp_conversa} onChange={(e) => setF({ ...v, whatsapp_conversa: e.target.value })} />
+            <Campo rotulo="Áudio transcrito (segundos)" inputMode="numeric" placeholder="vazio = sem limite" value={v.transcricao_segundos} onChange={(e) => setF({ ...v, transcricao_segundos: e.target.value })} />
           </div>
           <label className="flex items-start gap-2 text-sm text-slate-700">
             <input type="checkbox" className="mt-1" checked={v.bloquearAoAtingir} onChange={(e) => setF({ ...v, bloquearAoAtingir: e.target.checked })} />

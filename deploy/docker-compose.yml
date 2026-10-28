@@ -42,6 +42,8 @@ services:
       WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
       WHATSAPP_GRAPH_VERSAO: ${WHATSAPP_GRAPH_VERSAO:-v21.0}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODELO_TRANSCRICAO: ${OPENAI_MODELO_TRANSCRICAO:-gpt-4o-transcribe}
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }

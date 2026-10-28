@@ -10,10 +10,39 @@ import { log } from "../lib/log.js";
 import { agenteDaArea, rotear } from "./agentRouter.js";
 import { buscarContextoCRM, buscarHistorico, formatarContexto, type ContextoCRM } from "./contextService.js";
 import { ErroLLM, type AcaoAgente, type RegistroProvedores } from "./llmService.js";
+import { ErroTranscricao, type Transcritor } from "./transcricaoService.js";
 import type { CanalWhatsApp } from "./whatsappService.js";
 
 /** Dependências injetadas: em produção vêm do ambiente; nos testes, dublês (nada sai do sistema). */
-export type DepsAtendimento = { provedores: RegistroProvedores; canal: CanalWhatsApp; modeloPadrao: string };
+export type DepsAtendimento = { provedores: RegistroProvedores; canal: CanalWhatsApp; transcritor: Transcritor; modeloPadrao: string };
+
+export const PREFIXO_TRANSCRICAO = "[áudio transcrito]";
+const AUDIO_SEM_TRANSCRICAO = "[o cliente enviou um áudio que não pôde ser transcrito; peça para ele escrever a mensagem]";
+
+/**
+ * Transcreve os áudios pendentes da conversa (ChatGPT/OpenAI) antes de o agente (Claude) responder.
+ * Falha não trava o atendimento: o agente recebe um aviso e pede para o cliente escrever.
+ */
+export async function transcreverPendentes(conversaId: string, deps: DepsAtendimento, contatoId?: string | null) {
+  const audios = await db.select({ id: mensagem.id, midiaId: mensagem.midiaId }).from(mensagem)
+    .where(and(eq(mensagem.conversaId, conversaId), eq(mensagem.autor, "cliente"), eq(mensagem.midiaTipo, "audio"), isNull(mensagem.transcritaEm), isNull(mensagem.processadaEm)))
+    .orderBy(asc(mensagem.criadoEm));
+  for (const a of audios) {
+    let texto = AUDIO_SEM_TRANSCRICAO;
+    try {
+      const limite = await verificarLimite("transcricao_segundos");
+      if (!limite.permitido) throw new ErroTranscricao("franquia de transcrição esgotada", false);
+      const midia = await deps.canal.baixarMidia(a.midiaId!);
+      const r = await deps.transcritor.transcrever(midia.dados, midia.mime);
+      if (r.texto) texto = `${PREFIXO_TRANSCRICAO} ${r.texto}`.slice(0, 4000);
+      await registrarConsumo({ recurso: "transcricao_segundos", quantidade: r.segundos, referencia: a.id });
+    } catch (e) {
+      log("aviso", "atendimento.transcricao_falhou", { conversaId, erro: String(e instanceof Error ? e.message : e).slice(0, 200) });
+    }
+    await db.update(mensagem).set({ texto, transcritaEm: new Date() }).where(eq(mensagem.id, a.id));
+    if (contatoId) await db.insert(interacao).values({ tipo: "whatsapp", contatoId, descricao: `WhatsApp · cliente (áudio): ${texto}`.slice(0, 2000), respostaDoContato: true });
+  }
+}
 
 export const DESCONTO_MAXIMO_AGENTE = 10; // % que o Closer pode oferecer sem aprovação
 const LEASE_MS = 120_000;
@@ -74,6 +103,8 @@ export async function processarConversa(conversaId: string, deps: DepsAtendiment
   const pendentes = (await pendentesDa(conversaId)).map((m) => m.id);
   if (!conv || !pendentes.length) return;
   // Conversa com humano ou encerrada: a IA não responde (o humano vê tudo no Inbox)
+  // Transcreve antes de tudo: mesmo em atendimento humano, a equipe lê o áudio como texto no Inbox
+  await transcreverPendentes(conversaId, deps, conv.contatoId);
   if (conv.situacao !== "ia") { await marcarProcessadas(pendentes); return; }
 
   const ctx = await buscarContextoCRM(conversaId);

@@ -2,9 +2,14 @@ import { log } from "../lib/log.js";
 
 export type ResultadoEnvio = { enviado: true; idExterno: string | null } | { enviado: false; motivo: string; recuperavel: boolean };
 
+export type Midia = { dados: Buffer; mime: string };
+export const LIMITE_MIDIA = 16 * 1024 * 1024; // limite de áudio da Meta; a OpenAI aceita até 25 MB
+
 export interface CanalWhatsApp {
   /** Envia texto ao número (só dígitos, com DDI). Não lança: devolve o resultado. */
   enviarTexto(para: string, texto: string): Promise<ResultadoEnvio>;
+  /** Baixa uma mídia recebida (ex.: áudio) pelo id da Meta. Lança se não conseguir. */
+  baixarMidia(midiaId: string): Promise<Midia>;
 }
 
 /** WhatsApp Cloud API (Meta). Requer número aprovado e token de sistema. */
@@ -32,6 +37,21 @@ export class WhatsAppCloudApi implements CanalWhatsApp {
       return { enviado: false, motivo: `rede: ${String(e)}`.slice(0, 280), recuperavel: true };
     }
   }
+
+  async baixarMidia(midiaId: string): Promise<Midia> {
+    const auth = { authorization: `Bearer ${this.cfg.token}` };
+    // 1) a Meta devolve uma URL temporária; 2) o arquivo é baixado dela com o mesmo token
+    const info = await this.http(`https://graph.facebook.com/${this.cfg.versaoGraph}/${encodeURIComponent(midiaId)}`, { headers: auth, signal: AbortSignal.timeout(15_000) });
+    if (!info.ok) throw new Error(`Meta ${info.status} ao consultar mídia`);
+    const { url, mime_type, file_size } = (await info.json()) as { url?: string; mime_type?: string; file_size?: number };
+    if (!url) throw new Error("mídia sem URL");
+    if (file_size && file_size > LIMITE_MIDIA) throw new Error("mídia maior que o limite");
+    const arq = await this.http(url, { headers: auth, signal: AbortSignal.timeout(30_000) });
+    if (!arq.ok) throw new Error(`Meta ${arq.status} ao baixar mídia`);
+    const dados = Buffer.from(await arq.arrayBuffer());
+    if (dados.length > LIMITE_MIDIA) throw new Error("mídia maior que o limite");
+    return { dados, mime: mime_type ?? arq.headers.get("content-type") ?? "audio/ogg" };
+  }
 }
 
 /** Canal desligado: nada sai do sistema. Usado em testes e enquanto o WhatsApp não estiver configurado. */
@@ -42,6 +62,12 @@ export class WhatsAppDesligado implements CanalWhatsApp {
     this.enviados.push({ para, texto });
     log("aviso", "whatsapp.envio_desligado", { motivo: this.motivo });
     return { enviado: false, motivo: this.motivo, recuperavel: false };
+  }
+  readonly midias = new Map<string, Midia>();
+  async baixarMidia(midiaId: string): Promise<Midia> {
+    const m = this.midias.get(midiaId); // dublê de teste pode registrar mídias aqui
+    if (!m) throw new Error(this.motivo);
+    return m;
   }
 }
 

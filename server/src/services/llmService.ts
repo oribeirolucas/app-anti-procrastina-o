@@ -79,13 +79,11 @@ class ProvedorIndisponivel implements ProvedorLLM {
 
 export type RegistroProvedores = Record<string, ProvedorLLM>;
 
-/** Provedores a partir das variáveis de ambiente. OpenAI e Gemini ficam explícitos como não integrados. */
+/** Conversa com o cliente: Claude. (A OpenAI é usada só para transcrever áudio, em transcricaoService.) */
 export function provedoresDoAmbiente(env: NodeJS.ProcessEnv = process.env): RegistroProvedores {
   return {
     anthropic: env.ANTHROPIC_API_KEY
       ? new ProvedorAnthropic(new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 2, timeout: 60_000 }))
       : new ProvedorIndisponivel("ANTHROPIC_API_KEY não configurada"),
-    openai: new ProvedorIndisponivel("integração com OpenAI ainda não implementada"),
-    google: new ProvedorIndisponivel("integração com Gemini ainda não implementada"),
   };
 }

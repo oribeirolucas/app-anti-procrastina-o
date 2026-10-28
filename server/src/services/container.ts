@@ -3,11 +3,12 @@
 import { log } from "../lib/log.js";
 import { processarFila, type DepsAtendimento } from "./atendimentoService.js";
 import { provedoresDoAmbiente } from "./llmService.js";
+import { transcritorDoAmbiente } from "./transcricaoService.js";
 import { canalDoAmbiente } from "./whatsappService.js";
 
 let deps: DepsAtendimento | null = null;
 export function depsDoAmbiente(): DepsAtendimento {
-  deps ??= { provedores: provedoresDoAmbiente(), canal: canalDoAmbiente(), modeloPadrao: process.env.MODELO_IA_PADRAO || "claude-opus-5-5" };
+  deps ??= { provedores: provedoresDoAmbiente(), canal: canalDoAmbiente(), transcritor: transcritorDoAmbiente(), modeloPadrao: process.env.MODELO_IA_PADRAO || "claude-opus-5-5" };
   return deps;
 }
 

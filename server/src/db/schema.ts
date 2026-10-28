@@ -485,7 +485,7 @@ export const consumoUso = pgTable(
   (t) => [
     uniqueIndex("consumo_referencia_uq").on(t.recurso, t.referencia),
     index("consumo_recurso_data_idx").on(t.recurso, t.criadoEm),
-    check("consumo_recurso_ck", sql`${t.recurso} in ('ia_conversa','ia_tokens','whatsapp_conversa')`),
+    check("consumo_recurso_ck", sql`${t.recurso} in ('ia_conversa','ia_tokens','whatsapp_conversa','transcricao_segundos')`),
     check("consumo_quantidade_ck", sql`${t.quantidade} > 0`),
   ],
 );
@@ -599,6 +599,10 @@ export const mensagem = pgTable(
     autor: varchar("autor", { length: 8 }).notNull(), // cliente | ia | humano
     texto: text("texto").notNull(),
     idExterno: varchar("id_externo", { length: 120 }), // id da mensagem no canal (idempotência do webhook)
+    // Mídia recebida (ex.: áudio do WhatsApp): id na Meta para baixar; o texto vira a transcrição
+    midiaId: varchar("midia_id", { length: 120 }),
+    midiaTipo: varchar("midia_tipo", { length: 20 }), // audio | image | ...
+    transcritaEm: timestamp("transcrita_em", { withTimezone: true }),
     // Fila de atendimento: mensagem do cliente ainda sem resposta da IA (processada_em nulo)
     processadaEm: timestamp("processada_em", { withTimezone: true }),
     tentativas: integer("tentativas").notNull().default(0),

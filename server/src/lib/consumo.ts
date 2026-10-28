@@ -9,12 +9,13 @@ export const RECURSOS = {
   ia_conversa: "Conversas com IA",
   ia_tokens: "Tokens de IA",
   whatsapp_conversa: "Conversas no WhatsApp",
+  transcricao_segundos: "Áudio transcrito (segundos)",
 } as const;
 export type Recurso = keyof typeof RECURSOS;
 
 /** Franquia mensal da instalação. `null` = sem limite. */
 export type Limites = { [K in Recurso]: number | null } & { bloquearAoAtingir: boolean };
-export const LIMITES_PADRAO: Limites = { ia_conversa: null, ia_tokens: null, whatsapp_conversa: null, bloquearAoAtingir: false };
+export const LIMITES_PADRAO: Limites = { ia_conversa: null, ia_tokens: null, whatsapp_conversa: null, transcricao_segundos: null, bloquearAoAtingir: false };
 
 export async function obterLimites(exec: Tx | typeof db = db): Promise<Limites> {
   const [c] = await exec.select().from(configuracao).where(eq(configuracao.chave, "limites_uso"));

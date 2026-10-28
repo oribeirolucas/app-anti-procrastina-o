@@ -19,15 +19,17 @@ const payloadSchema = z.object({
         messages: z.array(z.object({
           from: z.string(), id: z.string(), timestamp: z.string(), type: z.string(),
           text: z.object({ body: z.string() }).optional(),
+          audio: z.object({ id: z.string(), mime_type: z.string().optional() }).optional(),
         })).optional(),
       }).passthrough(),
     })),
   })),
 });
 
-export type MensagemRecebida = { telefone: string; nomePerfil: string | null; idExterno: string; texto: string; recebidaEm: Date };
+export type MensagemRecebida = { telefone: string; nomePerfil: string | null; idExterno: string; texto: string; recebidaEm: Date; midia?: { id: string; tipo: "audio" } };
+export const TEXTO_AUDIO_PENDENTE = "[áudio do cliente aguardando transcrição]";
 
-const TIPOS_SEM_TEXTO: Record<string, string> = { audio: "áudio", image: "imagem", video: "vídeo", document: "documento", sticker: "figurinha", location: "localização", contacts: "contato" };
+const TIPOS_SEM_TEXTO: Record<string, string> = { image: "imagem", video: "vídeo", document: "documento", sticker: "figurinha", location: "localização", contacts: "contato" };
 
 /** Extrai remetente, texto e horário de cada mensagem do payload. Mensagens sem texto viram um marcador legível. */
 export function extrairMensagens(corpo: unknown): MensagemRecebida[] {
@@ -40,9 +42,17 @@ export function extrairMensagens(corpo: unknown): MensagemRecebida[] {
     for (const m of ch.value.messages ?? []) {
       const telefone = m.from.replace(/\D/g, "");
       if (!telefone) continue;
-      const texto = m.type === "text" && m.text ? m.text.body : `[${TIPOS_SEM_TEXTO[m.type] ?? m.type} enviado pelo cliente; peça para escrever em texto]`;
+      // Áudio: guarda o id da mídia; a transcrição acontece no atendimento, antes de chamar o agente
+      const audio = m.type === "audio" && m.audio ? m.audio : null;
+      const texto = m.type === "text" && m.text ? m.text.body
+        : audio ? TEXTO_AUDIO_PENDENTE
+        : `[${TIPOS_SEM_TEXTO[m.type] ?? m.type} enviado pelo cliente; peça para escrever em texto ou mandar áudio]`;
       const seg = Number(m.timestamp);
-      saida.push({ telefone, nomePerfil: nomes.get(m.from) ?? null, idExterno: m.id, texto: texto.slice(0, 4000), recebidaEm: Number.isFinite(seg) ? new Date(seg * 1000) : new Date() });
+      saida.push({
+        telefone, nomePerfil: nomes.get(m.from) ?? null, idExterno: m.id, texto: texto.slice(0, 4000),
+        recebidaEm: Number.isFinite(seg) ? new Date(seg * 1000) : new Date(),
+        ...(audio ? { midia: { id: audio.id, tipo: "audio" as const } } : {}),
+      });
     }
   }
   return saida;
@@ -76,9 +86,10 @@ export async function registrarMensagemRecebida(m: MensagemRecebida) {
         set: { ultimaMensagemEm: m.recebidaEm, contatoId: sql`coalesce(${conversa.contatoId}, ${c.id})`, situacao: sql`case when ${conversa.situacao} = 'encerrada' then 'ia' else ${conversa.situacao} end` },
       })
       .returning({ id: conversa.id });
-    const nova = await tx.insert(mensagem).values({ conversaId: conv.id, autor: "cliente", texto: m.texto, idExterno: m.idExterno, criadoEm: m.recebidaEm })
+    const nova = await tx.insert(mensagem).values({ conversaId: conv.id, autor: "cliente", texto: m.texto, idExterno: m.idExterno, criadoEm: m.recebidaEm, midiaId: m.midia?.id, midiaTipo: m.midia?.tipo })
       .onConflictDoNothing().returning({ id: mensagem.id });
-    if (nova.length) await tx.insert(interacao).values({ tipo: "whatsapp", contatoId: c.id, descricao: `WhatsApp · cliente: ${m.texto}`.slice(0, 2000), respostaDoContato: true });
+    // Áudio entra na timeline depois de transcrito (com o texto); texto entra já
+    if (nova.length && !m.midia) await tx.insert(interacao).values({ tipo: "whatsapp", contatoId: c.id, descricao: `WhatsApp · cliente: ${m.texto}`.slice(0, 2000), respostaDoContato: true });
     if (nova.length) await emitirEvento("interacao.resposta_contato", { contatoId: c.id }, `wa:${m.idExterno}`, tx);
     return { conversaId: conv.id, duplicada: !nova.length, leadNovo };
   });

@@ -78,6 +78,13 @@
       "when": 1793198061033,
       "tag": "0010_atendimento_ia",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793198963201,
+      "tag": "0011_transcricao_audio",
+      "breakpoints": true
     }
   ]
 }
