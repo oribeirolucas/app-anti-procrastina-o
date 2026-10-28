@@ -15,7 +15,7 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
 ## Oferta estruturada por plano (28/10/2026)
-- `empresa/OFERTA.md` define o que cada plano entrega: promessa, público, franquia, entregas e garantia. Marca **Lark Company** (empresa) e **Recepção IA** (produto).
+- `empresa/OFERTA.md` define o que cada plano entrega: promessa, público, franquia, entregas e garantia. Marca **Larc Company** (empresa) e **Recepção IA** (produto).
 - Os planos ganharam promessa, público ideal, franquia e entregas com status disponível ou em breve (migração 0012).
   - Os agentes recebem as entregas no contexto, com a ordem de vender só o disponível.
   - `GET /publico/oferta` serve a mesma oferta ao site, sem login e sem dados internos.
