@@ -47,7 +47,7 @@ const MENU: ItemMenu[] = [
   { para: "/reativacao", rotulo: "Reativação", icone: RefreshCcw, permissao: "automacoes:ler" },
   { para: "/automacoes", rotulo: "Automações", icone: Workflow, permissao: "automacoes:ler" },
   { para: "/financeiro", rotulo: "Financeiro", icone: Wallet, permissao: "financeiro:ler", grupo: "Gestão" },
-  { para: "/relatorio", rotulo: "Relatório mensal", icone: BarChart3, permissao: "auditoria:ver" },
+  { para: "/relatorio", rotulo: "Relatórios", icone: BarChart3, permissao: "auditoria:ver" },
   { para: "/admin", rotulo: "Administração", icone: Settings, permissao: "auditoria:ver" },
 ];
 

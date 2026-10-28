@@ -4,16 +4,16 @@ import { agendamento, campanha, campanhaDestinatario, contato, conversa, mensage
 import { hojeNoFuso, inicioDoDia, obterFuso } from "../lib/datas.js";
 import { log } from "../lib/log.js";
 import { obterRecursosPro, primeiroNome } from "../lib/recursosPro.js";
-import type { CanalWhatsApp, ResultadoEnvio } from "./whatsappService.js";
+import { numeroDaUnidade, type CanalWhatsApp, type ResultadoEnvio } from "./whatsappService.js";
 
 type Origem = "retomada" | "lembrete" | "campanha";
 const HORA = 3600_000;
 
-/** Conversa do número (cria se não existir, ligada ao contato com o mesmo telefone). */
-async function conversaDoTelefone(telefone: string, nome: string) {
+/** Conversa do número na unidade (cria se não existir, ligada ao contato com o mesmo telefone). */
+async function conversaDoTelefone(telefone: string, nome: string, unidadeId: string | null) {
   const [c] = await db.select({ id: contato.id }).from(contato).where(eq(contato.telefone, telefone)).limit(1);
-  const [conv] = await db.insert(conversa).values({ canal: "whatsapp", idExterno: telefone, nomeExibicao: nome, contatoId: c?.id })
-    .onConflictDoUpdate({ target: [conversa.canal, conversa.idExterno], set: { contatoId: sql`coalesce(${conversa.contatoId}, ${c?.id ?? null})` } })
+  const [conv] = await db.insert(conversa).values({ canal: "whatsapp", idExterno: telefone, unidadeId, nomeExibicao: nome, contatoId: c?.id })
+    .onConflictDoUpdate({ target: [conversa.canal, conversa.idExterno, conversa.unidadeId], set: { contatoId: sql`coalesce(${conversa.contatoId}, ${c?.id ?? null})` } })
     .returning({ id: conversa.id, situacao: conversa.situacao });
   return conv;
 }
@@ -40,8 +40,8 @@ const descadastrado = async (telefone: string) =>
 export async function executarRetomadas(canal: CanalWhatsApp, agora = new Date()) {
   const cfg = await obterRecursosPro();
   if (!cfg.retomada.ativo) return { enviadas: 0 };
-  const candidatas = await db.execute<{ conversa_id: string; telefone: string; nome: string; ref_id: string; ref_em: Date; ultima_cliente_em: Date | null }>(sql`
-    select c.id as conversa_id, c.id_externo as telefone, coalesce(ct.nome, c.nome_exibicao, '') as nome,
+  const candidatas = await db.execute<{ conversa_id: string; telefone: string; unidade_id: string | null; nome: string; ref_id: string; ref_em: Date; ultima_cliente_em: Date | null }>(sql`
+    select c.id as conversa_id, c.id_externo as telefone, c.unidade_id, coalesce(ct.nome, c.nome_exibicao, '') as nome,
            ult.id as ref_id, ult.criado_em as ref_em,
            (select max(m2.criado_em) from mensagem m2 where m2.conversa_id = c.id and m2.autor = 'cliente') as ultima_cliente_em
     from conversa c
@@ -56,7 +56,7 @@ export async function executarRetomadas(canal: CanalWhatsApp, agora = new Date()
       and ult.criado_em <= ${new Date(agora.getTime() - cfg.retomada.horasPasso1 * HORA)}
       -- já respondeu depois da nossa última mensagem (inclusive a uma retomada)? então não é silêncio
       and not exists (select 1 from mensagem mc where mc.conversa_id = c.id and mc.autor = 'cliente' and mc.criado_em > ult.criado_em)
-      and not exists (select 1 from agendamento a where a.telefone = c.id_externo and a.inicio > ${agora} and a.situacao in ('agendado','confirmado'))
+      and not exists (select 1 from agendamento a where a.telefone = c.id_externo and a.unidade_id is not distinct from c.unidade_id and a.inicio > ${agora} and a.situacao in ('agendado','confirmado'))
       -- negócio já fechado (ganho ou perdido) e nenhum aberto: não insiste
       and (c.contato_id is null
            or not exists (select 1 from oportunidade o where o.contato_id = c.contato_id and o.arquivado_em is null)
@@ -75,7 +75,8 @@ export async function executarRetomadas(canal: CanalWhatsApp, agora = new Date()
     if (!reservado.length) continue;
     const nome = primeiroNome(c.nome || "tudo bem");
     const texto = passo === 1 ? cfg.retomada.textoPasso1.replaceAll("{nome}", nome) : `[modelo ${cfg.retomada.modeloPasso2}] ${nome}`;
-    const r = passo === 1 ? await canal.enviarTexto(c.telefone, texto) : await canal.enviarModelo(c.telefone, cfg.retomada.modeloPasso2, cfg.idiomaModelos, [nome]);
+    const de = await numeroDaUnidade(c.unidade_id);
+    const r = passo === 1 ? await canal.enviarTexto(c.telefone, texto, de) : await canal.enviarModelo(c.telefone, cfg.retomada.modeloPasso2, cfg.idiomaModelos, [nome], de);
     await registrarSaida(c.conversa_id, texto, "retomada", r);
     if (!r.enviado) await db.update(retomada).set({ situacao: "falhou", erro: r.motivo }).where(eq(retomada.id, reservado[0].id));
     else enviadas++;
@@ -111,8 +112,8 @@ export async function enviarLembretes(canal: CanalWhatsApp, agora = new Date()) 
     if (!res) continue;
     if (await descadastrado(ag.telefone)) { await db.update(agendamento).set({ erroLembrete: "contato pediu para não receber mensagens" }).where(eq(agendamento.id, ag.id)); continue; }
     const params = [primeiroNome(ag.nome), formatoData(ag.inicio, fuso), formatoHora(ag.inicio, fuso), ag.procedimento ?? "sua consulta"];
-    const r = await canal.enviarModelo(ag.telefone, cfg.confirmacao.modelo, cfg.idiomaModelos, params);
-    const conv = await conversaDoTelefone(ag.telefone, ag.nome);
+    const r = await canal.enviarModelo(ag.telefone, cfg.confirmacao.modelo, cfg.idiomaModelos, params, await numeroDaUnidade(ag.unidadeId));
+    const conv = await conversaDoTelefone(ag.telefone, ag.nome, ag.unidadeId);
     await registrarSaida(conv.id, `Confirmação: ${params[0]}, ${params[3]} em ${params[1]} às ${params[2]}. Pode confirmar?`, "lembrete", r);
     if (r.enviado) enviados++;
     else await db.update(agendamento).set({ erroLembrete: r.motivo }).where(eq(agendamento.id, ag.id));
@@ -136,8 +137,8 @@ export async function executarCampanhas(canal: CanalWhatsApp) {
         .where(and(eq(campanhaDestinatario.id, d.id), eq(campanhaDestinatario.situacao, "pendente"))).returning({ id: campanhaDestinatario.id });
       if (!res) continue;
       if (await descadastrado(d.telefone)) { await db.update(campanhaDestinatario).set({ situacao: "pulado", motivo: "pediu para não receber mensagens", enviadoEm: null }).where(eq(campanhaDestinatario.id, d.id)); continue; }
-      const r = await canal.enviarModelo(d.telefone, c.modelo, cfg.idiomaModelos, [primeiroNome(d.nome)]);
-      const conv = await conversaDoTelefone(d.telefone, d.nome);
+      const r = await canal.enviarModelo(d.telefone, c.modelo, cfg.idiomaModelos, [primeiroNome(d.nome)], await numeroDaUnidade(c.unidadeId));
+      const conv = await conversaDoTelefone(d.telefone, d.nome, c.unidadeId);
       await registrarSaida(conv.id, `[campanha ${c.nome}] ${primeiroNome(d.nome)}`, "campanha", r);
       if (r.enviado) enviados++;
       else await db.update(campanhaDestinatario).set({ situacao: "falhou", motivo: r.motivo }).where(eq(campanhaDestinatario.id, d.id));

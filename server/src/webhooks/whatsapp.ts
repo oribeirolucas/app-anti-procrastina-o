@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/index.js";
-import { campanhaDestinatario, contato, conversa, etapaPipeline, interacao, mensagem, oportunidade } from "../db/schema.js";
+import { campanhaDestinatario, contato, conversa, etapaPipeline, interacao, mensagem, oportunidade, unidade } from "../db/schema.js";
 import { emitirEvento } from "../lib/eventos.js";
 import { log } from "../lib/log.js";
 import { assinaturaValida, json, lerCorpo } from "./captacao.js";
@@ -15,6 +15,7 @@ const payloadSchema = z.object({
     changes: z.array(z.object({
       field: z.string(),
       value: z.object({
+        metadata: z.object({ phone_number_id: z.string() }).partial().optional(),
         contacts: z.array(z.object({ wa_id: z.string(), profile: z.object({ name: z.string() }).partial().optional() })).optional(),
         messages: z.array(z.object({
           from: z.string(), id: z.string(), timestamp: z.string(), type: z.string(),
@@ -26,7 +27,7 @@ const payloadSchema = z.object({
   })),
 });
 
-export type MensagemRecebida = { telefone: string; nomePerfil: string | null; idExterno: string; texto: string; recebidaEm: Date; midia?: { id: string; tipo: "audio" } };
+export type MensagemRecebida = { telefone: string; nomePerfil: string | null; idExterno: string; texto: string; recebidaEm: Date; midia?: { id: string; tipo: "audio" }; numeroId?: string };
 export const TEXTO_AUDIO_PENDENTE = "[áudio do cliente aguardando transcrição]";
 
 const TIPOS_SEM_TEXTO: Record<string, string> = { image: "imagem", video: "vídeo", document: "documento", sticker: "figurinha", location: "localização", contacts: "contato" };
@@ -52,6 +53,7 @@ export function extrairMensagens(corpo: unknown): MensagemRecebida[] {
         telefone, nomePerfil: nomes.get(m.from) ?? null, idExterno: m.id, texto: texto.slice(0, 4000),
         recebidaEm: Number.isFinite(seg) ? new Date(seg * 1000) : new Date(),
         ...(audio ? { midia: { id: audio.id, tipo: "audio" as const } } : {}),
+        ...(ch.value.metadata?.phone_number_id ? { numeroId: ch.value.metadata.phone_number_id } : {}),
       });
     }
   }
@@ -64,6 +66,9 @@ export function extrairMensagens(corpo: unknown): MensagemRecebida[] {
  */
 export async function registrarMensagemRecebida(m: MensagemRecebida) {
   return db.transaction(async (tx) => {
+    // Unidade pelo número da clínica que recebeu (plano Rede); número desconhecido = número principal
+    const [u] = m.numeroId ? await tx.select({ id: unidade.id }).from(unidade).where(and(eq(unidade.numeroId, m.numeroId), eq(unidade.ativa, true))) : [];
+    const unidadeId = u?.id ?? null;
     let [c] = await tx.select({ id: contato.id, nome: contato.nome }).from(contato)
       .where(and(eq(contato.telefone, m.telefone), isNull(contato.arquivadoEm), isNull(contato.anonimizadoEm))).limit(1);
     let leadNovo = false;
@@ -79,9 +84,9 @@ export async function registrarMensagemRecebida(m: MensagemRecebida) {
       await emitirEvento("contato.criado", { contatoId: c.id }, undefined, tx);
       leadNovo = true;
     }
-    const [conv] = await tx.insert(conversa).values({ canal: "whatsapp", idExterno: m.telefone, nomeExibicao: m.nomePerfil, contatoId: c.id, ultimaMensagemEm: m.recebidaEm })
+    const [conv] = await tx.insert(conversa).values({ canal: "whatsapp", idExterno: m.telefone, unidadeId, nomeExibicao: m.nomePerfil, contatoId: c.id, ultimaMensagemEm: m.recebidaEm })
       .onConflictDoUpdate({
-        target: [conversa.canal, conversa.idExterno],
+        target: [conversa.canal, conversa.idExterno, conversa.unidadeId],
         // Conversa encerrada volta para a IA quando o cliente escreve de novo; em atendimento humano, continua humana
         set: { ultimaMensagemEm: m.recebidaEm, contatoId: sql`coalesce(${conversa.contatoId}, ${c.id})`, situacao: sql`case when ${conversa.situacao} = 'encerrada' then 'ia' else ${conversa.situacao} end` },
       })

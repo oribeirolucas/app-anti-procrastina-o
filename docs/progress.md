@@ -14,6 +14,15 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## Plano Rede liberado (28/10/2026)
+- Migração 0014: tabela `unidade` e `unidade_id` em conversa, agendamento e campanha.
+  A unicidade da conversa passou a ser (canal, número do cliente, unidade) com NULLS NOT DISTINCT; o índice antigo foi trocado.
+- Envio pelo número da unidade (`de` no canal), contexto com as informações da unidade e importação da agenda com coluna `unidade` (erro por linha se não existir).
+- Telas: aba Unidades em Administração; filtro de unidade no Inbox, na Agenda, na Reativação e em Relatórios (agora mensal ou semanal).
+- Verificado: `npm test` 77/77, estável em 2 rodadas. O novo `rede.test.ts` cobre: limite e número único, conversa separada por unidade, resposta pelo número certo com as informações da unidade, lembrete pela unidade, importação com unidade inválida e relatório semanal por unidade.
+  Roteiro no navegador cobrindo cadastro com validação e filtros.
+- Oferta: os 3 planos agora têm todas as entregas disponíveis.
+
 ## Plano Pro liberado (28/10/2026)
 - Migração 0013: `retomada`, `agendamento`, `campanha`, `campanha_destinatario` e `mensagem.origem`.
   A origem impede que retomada, lembrete ou campanha virem "última resposta" e entrem em laço.

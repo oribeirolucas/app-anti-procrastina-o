@@ -8,6 +8,13 @@
   - agenda importada por CSV com prévia e erro por linha. Reimportar não duplica;
   - campanha de reativação: só envia depois do Go em Aprovações, em lotes, pulando quem pediu para parar e registrando quem respondeu;
   - relatório mensal calculado com dados reais.
+- **P7 – Plano Rede (multiunidade)**:
+  - cada unidade tem nome, Phone number ID da Meta (único) e informações próprias;
+  - até `LIMITE_UNIDADES` unidades ativas (padrão 3), cadastradas só pelo admin;
+  - a mensagem é atribuída à unidade pelo número que a recebeu; número desconhecido vai para o principal;
+  - uma conversa por pessoa e unidade;
+  - resposta, retomada, lembrete e campanha saem pelo número da unidade, e o agente responde com as informações dela;
+  - agenda, inbox, campanhas e relatório filtram por unidade. O relatório também é semanal.
 - **I10 – Divisão de IAs**: Claude conversa (agentes só aceitam Claude); ChatGPT só transcreve áudio. Áudio é transcrito antes do agente responder; falha na transcrição não trava o atendimento (o agente pede texto); consumo em segundos entra na franquia.
 - **I9 – Atendimento autônomo WhatsApp** (docs/WHATSAPP.md): webhook assinado e idempotente; número novo vira lead na 1ª etapa; memória das últimas 15 mensagens + dados do CRM; roteamento SDR / Closer / CS por etapa e contrato; ações do LLM validadas pelo sistema (desconto > 10% e reembolso → Aprovações); fallback garantido (cliente nunca fica sem resposta; conversa vai para humano); conversa em atendimento humano não é respondida pela IA; franquia de uso respeitada; nenhuma mensagem real em teste.
 - **G1 – Aprovações (governança)**: agentes não executam orçamento, desconto ou deploy sem Go do estrategista (admin). Pedido idempotente pela referência; decisão única (não decide duas vezes); recusa exige motivo; tudo auditado.

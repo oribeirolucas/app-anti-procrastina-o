@@ -4,6 +4,7 @@ import { dataHora } from "../lib/formato";
 import { useAvisar } from "../lib/aviso";
 import { usePode } from "../lib/sessao";
 import { AreaTexto, Botao, Campo, Carregando, Erro, Etiqueta, Modal, Pagina, Tabela, Vazio } from "../components/ui";
+import { FiltroUnidade } from "../components/Unidades";
 
 const ROTULO: Record<string, string> = { rascunho: "rascunho", aguardando_aprovacao: "aguardando seu Go", aprovada: "aprovada", enviando: "enviando", concluida: "concluída", recusada: "recusada", cancelada: "cancelada" };
 
@@ -13,8 +14,8 @@ export default function Reativacao() {
   const gerir = usePode("automacoes:gerir");
   const q = trpc.pro.campanhas.useQuery(undefined, { refetchInterval: 30_000 });
   const [nova, setNova] = useState(false);
-  const [f, setF] = useState({ nome: "", csv: "" });
-  const criar = trpc.pro.criarCampanha.useMutation({ onSuccess: (c) => { utils.pro.campanhas.invalidate(); avisar(`Campanha criada com ${c.destinatarios} pacientes${c.erros.length ? ` (${c.erros.length} linhas ignoradas)` : ""}.`); setNova(false); setF({ nome: "", csv: "" }); } });
+  const [f, setF] = useState({ nome: "", csv: "", unidadeId: "" });
+  const criar = trpc.pro.criarCampanha.useMutation({ onSuccess: (c) => { utils.pro.campanhas.invalidate(); avisar(`Campanha criada com ${c.destinatarios} pacientes${c.erros.length ? ` (${c.erros.length} linhas ignoradas)` : ""}.`); setNova(false); setF({ nome: "", csv: "", unidadeId: "" }); } });
   const solicitar = trpc.pro.solicitarEnvio.useMutation({ onSuccess: () => { utils.pro.campanhas.invalidate(); avisar("Enviada para Aprovações. O disparo começa depois do Go."); } });
   const cancelar = trpc.pro.cancelarCampanha.useMutation({ onSuccess: () => { utils.pro.campanhas.invalidate(); avisar("Campanha cancelada."); } });
   return (
@@ -25,7 +26,7 @@ export default function Reativacao() {
         <Tabela colunas={["Campanha", "Situação", "Pacientes", "Enviados", "Responderam", "Falhas/pulados", ""]}>
           {q.data.map((c) => (
             <tr key={c.id}>
-              <td className="px-3 py-2">{c.nome}<div className="text-xs text-slate-400">{c.modelo} · {dataHora(c.criadoEm)}</div></td>
+              <td className="px-3 py-2">{c.nome}<div className="text-xs text-slate-400">{c.unidade ? `${c.unidade} · ` : ""}{c.modelo} · {dataHora(c.criadoEm)}</div></td>
               <td className="px-3 py-2"><Etiqueta valor={c.situacao} texto={ROTULO[c.situacao]} /></td>
               <td className="px-3 py-2">{c.total}</td>
               <td className="px-3 py-2">{c.enviados}</td>
@@ -40,8 +41,9 @@ export default function Reativacao() {
         </Tabela>
       )}
       <Modal titulo="Nova campanha de reativação" aberto={nova} aoFechar={() => setNova(false)} largura="max-w-2xl">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); criar.mutate(f); }}>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); criar.mutate({ ...f, unidadeId: f.unidadeId || undefined }); }}>
           <Campo rotulo="Nome *" required minLength={3} maxLength={120} value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} placeholder="Ex.: Pacientes sem visita há 6 meses" />
+          <FiltroUnidade valor={f.unidadeId} aoMudar={(v) => setF({ ...f, unidadeId: v })} rotulo="Enviar pelo número da unidade" todas="Número principal" />
           <label className="block text-sm"><span className="text-slate-700">Lista (CSV: nome; telefone)</span>
             <input type="file" accept=".csv,text/csv" className="mt-1 block text-sm" onChange={async (e) => { const a = e.target.files?.[0]; if (a) setF({ ...f, csv: await a.text() }); }} />
           </label>

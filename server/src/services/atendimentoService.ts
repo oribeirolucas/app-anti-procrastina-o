@@ -11,7 +11,7 @@ import { agenteDaArea, rotear } from "./agentRouter.js";
 import { buscarContextoCRM, buscarHistorico, formatarContexto, type ContextoCRM } from "./contextService.js";
 import { ErroLLM, type AcaoAgente, type RegistroProvedores } from "./llmService.js";
 import { ErroTranscricao, type Transcritor } from "./transcricaoService.js";
-import type { CanalWhatsApp } from "./whatsappService.js";
+import { numeroDaConversa, type CanalWhatsApp } from "./whatsappService.js";
 
 /** Dependências injetadas: em produção vêm do ambiente; nos testes, dublês (nada sai do sistema). */
 export type DepsAtendimento = { provedores: RegistroProvedores; canal: CanalWhatsApp; transcritor: Transcritor; modeloPadrao: string };
@@ -157,7 +157,7 @@ async function registrarEEnviar(conversaId: string, para: string, texto: string,
     if (o.contatoId) await tx.insert(interacao).values({ tipo: "whatsapp", contatoId: o.contatoId, descricao: `WhatsApp · ${o.agenteNome ?? "equipe"}: ${texto}`.slice(0, 2000) });
     return ins;
   });
-  const r = await deps.canal.enviarTexto(para, texto);
+  const r = await deps.canal.enviarTexto(para, texto, await numeroDaConversa(conversaId));
   await db.update(mensagem).set(r.enviado ? { enviadaEm: new Date(), idExterno: r.idExterno } : { erroEnvio: r.motivo }).where(eq(mensagem.id, m.id));
   if (r.enviado) await registrarConsumo({ recurso: "whatsapp_conversa", quantidade: 1, referencia: `${conversaId}:${hojeNoFuso(await obterFuso())}` });
   return r.enviado;

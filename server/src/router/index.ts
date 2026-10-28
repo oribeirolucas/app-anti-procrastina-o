@@ -13,6 +13,7 @@ import { inboxRouter } from "./operacao/inbox.js";
 import { marketingRouter } from "./operacao/marketing.js";
 import { sucessoRouter } from "./operacao/sucesso.js";
 import { proRouter } from "./operacao/pro.js";
+import { unidadesRouter } from "./operacao/unidades.js";
 import { router } from "./trpc.js";
 
 export const appRouter = router({
@@ -31,6 +32,7 @@ export const appRouter = router({
   marketing: marketingRouter,
   sucesso: sucessoRouter,
   pro: proRouter,
+  unidades: unidadesRouter,
 });
 
 export type AppRouter = typeof appRouter;

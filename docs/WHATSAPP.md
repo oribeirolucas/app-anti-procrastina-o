@@ -87,3 +87,9 @@ Modelos sugeridos para submeter à Meta na implantação (categoria "Utilidade" 
 - `confirmacao_consulta`: "Olá, {{1}}! Passando para confirmar sua consulta de {{4}} em {{2}} às {{3}}. Podemos confirmar?"
 - `retomada_contato`: "Oi, {{1}}! Ficou alguma dúvida sobre o atendimento? Se quiser, te ajudo a escolher um horário."
 - `reativacao_pacientes`: "Oi, {{1}}! Sentimos sua falta por aqui. Quer que eu veja um horário para você?"
+
+## Plano Rede (várias unidades)
+1. Na conta Meta da clínica, adicione um número de WhatsApp por unidade (todos no mesmo app).
+2. Em Administração → Unidades, cadastre cada unidade com o **Phone number ID** do número e as informações (endereço, horários, equipe).
+3. O webhook é o mesmo para todos os números: a mensagem é atribuída à unidade pelo `phone_number_id` que vem nela.
+4. O token (`WHATSAPP_TOKEN`) precisa ter acesso a todos os números. `WHATSAPP_PHONE_NUMBER_ID` continua sendo o número principal (usado quando não há unidade).

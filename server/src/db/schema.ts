@@ -13,6 +13,7 @@ import {
   index,
   uniqueIndex,
   check,
+  unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -582,6 +583,8 @@ export const conversa = pgTable(
     nomeExibicao: varchar("nome_exibicao", { length: 120 }),
     contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
     agenteId: uuid("agente_id").references(() => agente.id, { onDelete: "set null" }),
+    // Unidade (número de WhatsApp da clínica) em que a conversa acontece; nulo = número principal
+    unidadeId: uuid("unidade_id").references(() => unidade.id, { onDelete: "set null" }),
     situacao: varchar("situacao", { length: 10 }).notNull().default("ia"), // ia | humano | encerrada
     // Trava de processamento (lease): só um processo responde a conversa por vez; expira sozinha se ele cair
     processandoAte: timestamp("processando_ate", { withTimezone: true }),
@@ -589,7 +592,8 @@ export const conversa = pgTable(
     criadoEm: criadoEm(),
   },
   (t) => [
-    uniqueIndex("conversa_canal_externo_uq").on(t.canal, t.idExterno),
+    // A mesma pessoa pode falar com duas unidades: uma conversa por unidade
+    unique("conversa_canal_externo_unidade_uq").on(t.canal, t.idExterno, t.unidadeId).nullsNotDistinct(),
     index("conversa_ultima_idx").on(t.situacao, t.ultimaMensagemEm),
     check("conversa_situacao_ck", sql`${t.situacao} in ('ia','humano','encerrada')`),
   ],
@@ -654,6 +658,7 @@ export const agendamento = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    unidadeId: uuid("unidade_id").references(() => unidade.id, { onDelete: "set null" }),
     nome: varchar("nome", { length: 200 }).notNull(),
     telefone: varchar("telefone", { length: 20 }).notNull(), // só dígitos, com DDI
     inicio: timestamp("inicio", { withTimezone: true }).notNull(),
@@ -686,6 +691,7 @@ export const campanha = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     nome: varchar("nome", { length: 120 }).notNull(),
     modelo: varchar("modelo", { length: 120 }).notNull(), // nome do modelo aprovado na Meta
+    unidadeId: uuid("unidade_id").references(() => unidade.id, { onDelete: "set null" }), // número que envia
     // rascunho → aguardando_aprovacao → aprovada → enviando → concluida | recusada | cancelada
     situacao: varchar("situacao", { length: 22 }).notNull().default("rascunho"),
     solicitacaoId: uuid("solicitacao_id").references(() => solicitacaoAprovacao.id, { onDelete: "set null" }),
@@ -714,4 +720,24 @@ export const campanhaDestinatario = pgTable(
     index("camp_dest_fila_idx").on(t.campanhaId, t.situacao),
     check("camp_dest_situacao_ck", sql`${t.situacao} in ('pendente','enviado','falhou','pulado')`),
   ],
+);
+
+// ───────────────────────── Unidades (plano Rede) ─────────────────────────
+
+// Cada unidade é um número de WhatsApp da clínica, com informações próprias que o agente usa nas respostas.
+export const unidade = pgTable(
+  "unidade",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 80 }).notNull(),
+    // Phone number ID da Meta: identifica de qual número veio cada mensagem e por qual número responder
+    numeroId: varchar("numero_id", { length: 40 }).notNull(),
+    numeroExibicao: varchar("numero_exibicao", { length: 30 }),
+    informacoes: text("informacoes").notNull().default(""), // endereço, horários, equipe, particularidades
+    ativa: boolean("ativa").notNull().default(true),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [uniqueIndex("unidade_numero_uq").on(t.numeroId), uniqueIndex("unidade_nome_uq").on(sql`lower(${t.nome})`)],
 );

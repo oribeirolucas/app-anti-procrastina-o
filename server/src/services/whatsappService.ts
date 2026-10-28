@@ -1,3 +1,6 @@
+import { eq } from "drizzle-orm";
+import { db } from "../db/index.js";
+import { conversa, unidade } from "../db/schema.js";
 import { log } from "../lib/log.js";
 
 export type ResultadoEnvio = { enviado: true; idExterno: string | null } | { enviado: false; motivo: string; recuperavel: boolean };
@@ -6,10 +9,10 @@ export type Midia = { dados: Buffer; mime: string };
 export const LIMITE_MIDIA = 16 * 1024 * 1024; // limite de áudio da Meta; a OpenAI aceita até 25 MB
 
 export interface CanalWhatsApp {
-  /** Envia texto ao número (só dígitos, com DDI). Não lança: devolve o resultado. */
-  enviarTexto(para: string, texto: string): Promise<ResultadoEnvio>;
+  /** Envia texto ao número (só dígitos, com DDI). `de` = phone number ID da unidade (padrão: número principal). Não lança. */
+  enviarTexto(para: string, texto: string, de?: string): Promise<ResultadoEnvio>;
   /** Envia um modelo aprovado pela Meta (obrigatório para escrever primeiro fora da janela de 24h). */
-  enviarModelo(para: string, modelo: string, idioma: string, parametros: string[]): Promise<ResultadoEnvio>;
+  enviarModelo(para: string, modelo: string, idioma: string, parametros: string[], de?: string): Promise<ResultadoEnvio>;
   /** Baixa uma mídia recebida (ex.: áudio) pelo id da Meta. Lança se não conseguir. */
   baixarMidia(midiaId: string): Promise<Midia>;
 }
@@ -21,19 +24,19 @@ export class WhatsAppCloudApi implements CanalWhatsApp {
     private readonly http: typeof fetch = fetch,
   ) {}
 
-  enviarTexto(para: string, texto: string): Promise<ResultadoEnvio> {
-    return this.enviar({ messaging_product: "whatsapp", recipient_type: "individual", to: para, type: "text", text: { preview_url: false, body: texto.slice(0, 4096) } });
+  enviarTexto(para: string, texto: string, de?: string): Promise<ResultadoEnvio> {
+    return this.enviar(de, { messaging_product: "whatsapp", recipient_type: "individual", to: para, type: "text", text: { preview_url: false, body: texto.slice(0, 4096) } });
   }
 
-  enviarModelo(para: string, modelo: string, idioma: string, parametros: string[]): Promise<ResultadoEnvio> {
-    return this.enviar({
+  enviarModelo(para: string, modelo: string, idioma: string, parametros: string[], de?: string): Promise<ResultadoEnvio> {
+    return this.enviar(de, {
       messaging_product: "whatsapp", recipient_type: "individual", to: para, type: "template",
       template: { name: modelo, language: { code: idioma }, components: parametros.length ? [{ type: "body", parameters: parametros.map((t) => ({ type: "text", text: t.slice(0, 1000) })) }] : [] },
     });
   }
 
-  private async enviar(corpoEnvio: unknown): Promise<ResultadoEnvio> {
-    const url = `https://graph.facebook.com/${this.cfg.versaoGraph}/${this.cfg.phoneNumberId}/messages`;
+  private async enviar(de: string | undefined, corpoEnvio: unknown): Promise<ResultadoEnvio> {
+    const url = `https://graph.facebook.com/${this.cfg.versaoGraph}/${encodeURIComponent(de ?? this.cfg.phoneNumberId)}/messages`;
     try {
       const r = await this.http(url, {
         method: "POST",
@@ -69,16 +72,16 @@ export class WhatsAppCloudApi implements CanalWhatsApp {
 
 /** Canal desligado: nada sai do sistema. Usado em testes e enquanto o WhatsApp não estiver configurado. */
 export class WhatsAppDesligado implements CanalWhatsApp {
-  readonly enviados: { para: string; texto: string }[] = [];
-  readonly modelos: { para: string; modelo: string; parametros: string[] }[] = [];
+  readonly enviados: { para: string; texto: string; de?: string }[] = [];
+  readonly modelos: { para: string; modelo: string; parametros: string[]; de?: string }[] = [];
   constructor(private readonly motivo = "WhatsApp não configurado") {}
-  async enviarTexto(para: string, texto: string): Promise<ResultadoEnvio> {
-    this.enviados.push({ para, texto });
+  async enviarTexto(para: string, texto: string, de?: string): Promise<ResultadoEnvio> {
+    this.enviados.push({ para, texto, ...(de ? { de } : {}) });
     log("aviso", "whatsapp.envio_desligado", { motivo: this.motivo });
     return { enviado: false, motivo: this.motivo, recuperavel: false };
   }
-  async enviarModelo(para: string, modelo: string, _idioma: string, parametros: string[]): Promise<ResultadoEnvio> {
-    this.modelos.push({ para, modelo, parametros });
+  async enviarModelo(para: string, modelo: string, _idioma: string, parametros: string[], de?: string): Promise<ResultadoEnvio> {
+    this.modelos.push({ para, modelo, parametros, ...(de ? { de } : {}) });
     return { enviado: false, motivo: this.motivo, recuperavel: false };
   }
   readonly midias = new Map<string, Midia>();
@@ -94,4 +97,16 @@ export function canalDoAmbiente(env: NodeJS.ProcessEnv = process.env): CanalWhat
   if (env.NODE_ENV === "test") return new WhatsAppDesligado("ambiente de teste");
   if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID) return new WhatsAppDesligado();
   return new WhatsAppCloudApi({ token: env.WHATSAPP_TOKEN, phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID, versaoGraph: env.WHATSAPP_GRAPH_VERSAO || "v21.0" });
+}
+
+
+/** Phone number ID por onde a conversa deve sair (unidade dela), ou undefined para o número principal. */
+export async function numeroDaUnidade(unidadeId: string | null | undefined): Promise<string | undefined> {
+  if (!unidadeId) return undefined;
+  const [u] = await db.select({ numeroId: unidade.numeroId }).from(unidade).where(eq(unidade.id, unidadeId));
+  return u?.numeroId;
+}
+export async function numeroDaConversa(conversaId: string) {
+  const [c] = await db.select({ unidadeId: conversa.unidadeId }).from(conversa).where(eq(conversa.id, conversaId));
+  return numeroDaUnidade(c?.unidadeId);
 }

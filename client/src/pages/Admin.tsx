@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { trpc, type Entradas } from "../lib/trpc";
+import { trpc, type Entradas, type Saidas } from "../lib/trpc";
 import { dataHora, moeda } from "../lib/formato";
 import { useAvisar } from "../lib/aviso";
 import { usePode } from "../lib/sessao";
@@ -343,10 +343,59 @@ function RecursosPro() {
   );
 }
 
+type Unidade = Saidas["unidades"]["listar"][number];
+const vazioUnidade = { nome: "", numeroId: "", numeroExibicao: "", informacoes: "", ativa: true };
+
+function Unidades() {
+  const utils = trpc.useUtils();
+  const avisar = useAvisar();
+  const q = trpc.unidades.listar.useQuery();
+  const [editando, setEditando] = useState<Unidade | "nova" | null>(null);
+  const [f, setF] = useState(vazioUnidade);
+  const fechar = () => { setEditando(null); setF(vazioUnidade); };
+  const salvar = trpc.unidades.salvar.useMutation({ onSuccess: () => { utils.unidades.listar.invalidate(); avisar("Unidade salva."); fechar(); } });
+  const alternar = trpc.unidades.salvar.useMutation({ onSuccess: () => utils.unidades.listar.invalidate() });
+  const campos = salvar.error?.data?.zod?.fieldErrors as Record<string, string[]> | undefined;
+  const abrir = (u: Unidade) => { setEditando(u); setF({ nome: u.nome, numeroId: u.numeroId, numeroExibicao: u.numeroExibicao ?? "", informacoes: u.informacoes, ativa: u.ativa }); };
+  return (
+    <Cartao titulo="Unidades (plano Rede)" acoes={<Botao onClick={() => setEditando("nova")}>+ Unidade</Botao>}>
+      <p className="mb-3 text-xs text-slate-500">Cada unidade é um número de WhatsApp da clínica. As mensagens chegam e saem pelo número da unidade, e o agente usa as informações dela (endereço, horários, equipe). Sem unidades, tudo usa o número principal.</p>
+      <Erro erro={q.error ?? alternar.error} tentar={() => q.refetch()} />
+      {q.isLoading ? <Carregando /> : !q.data?.length ? <Vazio texto="Nenhuma unidade: a instalação usa um número só." /> : (
+        <Tabela colunas={["Unidade", "Número", "Situação", ""]}>
+          {q.data.map((u) => (
+            <tr key={u.id} className={u.ativa ? "" : "text-slate-400"}>
+              <td className="px-3 py-2">{u.nome}<div className="max-w-md truncate text-xs text-slate-500">{u.informacoes}</div></td>
+              <td className="px-3 py-2 text-xs">{u.numeroExibicao ?? "—"}<div className="font-mono text-slate-400">{u.numeroId}</div></td>
+              <td className="px-3 py-2"><Etiqueta valor={u.ativa ? "ativo" : "inativo"} texto={u.ativa ? "ativa" : "inativa"} /></td>
+              <td className="space-x-2 px-3 py-2 text-xs">
+                <button className="underline" onClick={() => abrir(u)}>editar</button>
+                <button className="underline" disabled={alternar.isPending} onClick={() => alternar.mutate({ id: u.id, versao: u.versao, nome: u.nome, numeroId: u.numeroId, numeroExibicao: u.numeroExibicao, informacoes: u.informacoes, ativa: !u.ativa })}>{u.ativa ? "desativar" : "reativar"}</button>
+              </td>
+            </tr>
+          ))}
+        </Tabela>
+      )}
+      <Modal titulo={editando === "nova" ? "Nova unidade" : "Editar unidade"} aberto={!!editando} aoFechar={fechar} largura="max-w-2xl">
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); salvar.mutate({ ...f, numeroExibicao: f.numeroExibicao || null, ...(editando && editando !== "nova" ? { id: editando.id, versao: editando.versao } : {}) }); }}>
+          <Campo rotulo="Nome *" required maxLength={80} value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} erro={campos?.nome?.[0]} placeholder="Ex.: Unidade Centro" />
+          <div className="grid gap-3 md:grid-cols-2">
+            <Campo rotulo="Phone number ID (Meta) *" required inputMode="numeric" value={f.numeroId} onChange={(e) => setF({ ...f, numeroId: e.target.value })} erro={campos?.numeroId?.[0]} />
+            <Campo rotulo="Número (exibição)" maxLength={30} value={f.numeroExibicao} onChange={(e) => setF({ ...f, numeroExibicao: e.target.value })} placeholder="(11) 4000-0000" />
+          </div>
+          <AreaTexto rotulo="Informações da unidade (o agente usa nas respostas)" rows={6} maxLength={5000} value={f.informacoes} onChange={(e) => setF({ ...f, informacoes: e.target.value })} placeholder="Endereço, horários, estacionamento, profissionais, procedimentos que só esta unidade faz..." />
+          <Erro erro={salvar.error} />
+          <div className="flex justify-end gap-2"><Botao type="button" variante="secundario" onClick={fechar}>Cancelar</Botao><Botao carregando={salvar.isPending}>Salvar</Botao></div>
+        </form>
+      </Modal>
+    </Cartao>
+  );
+}
+
 export default function Admin() {
   const gerirUsuarios = usePode("usuarios:gerir");
   const abas = [
-    ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }, { para: "/admin/planos", rotulo: "Planos e preços" }, { para: "/admin/recursos-pro", rotulo: "Recursos Pro" }] : []),
+    ...(gerirUsuarios ? [{ para: "/admin/usuarios", rotulo: "Usuários e permissões" }, { para: "/admin/configuracoes", rotulo: "Configurações" }, { para: "/admin/planos", rotulo: "Planos e preços" }, { para: "/admin/recursos-pro", rotulo: "Recursos Pro" }, { para: "/admin/unidades", rotulo: "Unidades" }] : []),
     { para: "/admin/uso", rotulo: "Uso e limites" },
     { para: "/admin/etapas", rotulo: "Pipeline" },
     { para: "/admin/auditoria", rotulo: "Auditoria" },
@@ -361,6 +410,7 @@ export default function Admin() {
         {gerirUsuarios && <Route path="configuracoes" element={<Configuracoes />} />}
         {gerirUsuarios && <Route path="planos" element={<Planos />} />}
         {gerirUsuarios && <Route path="recursos-pro" element={<RecursosPro />} />}
+        {gerirUsuarios && <Route path="unidades" element={<Unidades />} />}
         <Route path="uso" element={<UsoLimites />} />
         <Route path="etapas" element={<Etapas />} />
         <Route path="auditoria" element={<Auditoria />} />

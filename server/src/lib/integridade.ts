@@ -10,6 +10,8 @@ const MENSAGENS: Record<string, string> = {
   lanc_mensalidade_uq: "A mensalidade deste contrato neste mês já foi gerada.",
   lanc_setup_uq: "O setup deste contrato já foi lançado.",
   plano_nome_uq: "Já existe um plano com este nome.",
+  unidade_numero_uq: "Este número já está cadastrado em outra unidade.",
+  unidade_nome_uq: "Já existe uma unidade com este nome.",
 };
 
 function erroPg(e: unknown): { code?: string; constraint?: string } | null {

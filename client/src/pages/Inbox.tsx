@@ -3,6 +3,7 @@ import { Bot, User, UserCog } from "lucide-react";
 import { trpc } from "../lib/trpc";
 import { dataHora } from "../lib/formato";
 import { Carregando, Erro, Etiqueta, Pagina, Vazio } from "../components/ui";
+import { FiltroUnidade } from "../components/Unidades";
 
 const AUTOR = {
   cliente: { rotulo: "Cliente", icone: User, classe: "bg-white border border-slate-200 self-start" },
@@ -36,7 +37,8 @@ function Dialogo({ conversaId }: { conversaId: string }) {
 
 export default function Inbox() {
   const [situacao, setSituacao] = useState<"ativas" | "encerrada">("ativas");
-  const q = trpc.inbox.conversas.useQuery({ situacao }, { refetchInterval: 10_000 });
+  const [unidadeId, setUnidadeId] = useState("");
+  const q = trpc.inbox.conversas.useQuery({ situacao, unidadeId: unidadeId || undefined }, { refetchInterval: 10_000 });
   const [abertas, setAbertas] = useState<string[]>([]);
   const alternar = (id: string) => setAbertas((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id].slice(-3)));
   return (
@@ -45,6 +47,7 @@ export default function Inbox() {
       <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
         O WhatsApp ainda não está conectado (requer a API oficial da Meta). As conversas aparecem aqui assim que a integração for ativada.
       </p>
+      <div className="max-w-xs"><FiltroUnidade valor={unidadeId} aoMudar={setUnidadeId} /></div>
       <div className="flex gap-1 border-b border-slate-200">
         {(["ativas", "encerrada"] as const).map((s) => (
           <button key={s} onClick={() => setSituacao(s)} className={`px-3 py-2 text-sm ${situacao === s ? "border-b-2 border-indigo-600 font-medium text-indigo-700" : "text-slate-600"}`}>{s === "ativas" ? "Ativas" : "Encerradas"}</button>
@@ -59,7 +62,7 @@ export default function Inbox() {
                 <button onClick={() => alternar(c.id)} className={`w-full px-3 py-2 text-left hover:bg-slate-50 ${abertas.includes(c.id) ? "bg-indigo-50" : ""}`} aria-pressed={abertas.includes(c.id)}>
                   <div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-medium text-slate-800">{c.nome}</span><Etiqueta valor={c.situacao} /></div>
                   <div className="truncate text-xs text-slate-500">{c.ultima ?? "—"}</div>
-                  <div className="text-[11px] text-slate-400">{c.agente ?? "sem agente"} · {dataHora(c.ultimaMensagemEm)}</div>
+                  <div className="text-[11px] text-slate-400">{c.unidade ? `${c.unidade} · ` : ""}{c.agente ?? "sem agente"} · {dataHora(c.ultimaMensagemEm)}</div>
                 </button>
               </li>
             ))}

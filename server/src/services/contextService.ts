@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { agendamento, configuracao, contato, contrato, conversa, empresa, etapaPipeline, lancamento, mensagem, oportunidade, plano } from "../db/schema.js";
+import { agendamento, configuracao, contato, contrato, conversa, empresa, etapaPipeline, lancamento, mensagem, oportunidade, plano, unidade } from "../db/schema.js";
 import type { Turno } from "./llmService.js";
 
 export const LIMITE_HISTORICO = 15;
@@ -26,6 +26,7 @@ export type ContextoCRM = {
   planos: PlanoOferta[];
   baseConhecimento: string;
   proximaConsulta?: { id: string; versao: number; inicio: Date; procedimento: string | null; situacao: string } | null;
+  unidade?: { nome: string; informacoes: string } | null;
 };
 
 /** Últimas mensagens da conversa (mais antigas primeiro), no formato de turnos para o LLM. */
@@ -41,12 +42,14 @@ export async function buscarHistorico(conversaId: string, limite = LIMITE_HISTOR
 
 /** Metadados do lead/cliente: nome, etapa, valor da oportunidade, contratos e histórico de cobranças. */
 export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM> {
-  const [conv] = await db.select({ telefone: conversa.idExterno }).from(conversa).where(eq(conversa.id, conversaId));
+  const [conv] = await db.select({ telefone: conversa.idExterno, unidadeId: conversa.unidadeId, unidadeNome: unidade.nome, unidadeInfo: unidade.informacoes })
+    .from(conversa).leftJoin(unidade, eq(unidade.id, conversa.unidadeId)).where(eq(conversa.id, conversaId));
+  const unidadeCtx = conv?.unidadeNome ? { nome: conv.unidadeNome, informacoes: conv.unidadeInfo ?? "" } : null;
   // Próxima consulta do número (inclui as das últimas 2h, para respostas em cima da hora)
   const [proximaConsulta] = conv
     ? await db.select({ id: agendamento.id, versao: agendamento.versao, inicio: agendamento.inicio, procedimento: agendamento.procedimento, situacao: agendamento.situacao })
         .from(agendamento)
-        .where(and(eq(agendamento.telefone, conv.telefone), gte(agendamento.inicio, new Date(Date.now() - 2 * 3600_000)), inArray(agendamento.situacao, ["agendado", "confirmado", "remarcar"])))
+        .where(and(eq(agendamento.telefone, conv.telefone), conv.unidadeId ? eq(agendamento.unidadeId, conv.unidadeId) : isNull(agendamento.unidadeId), gte(agendamento.inicio, new Date(Date.now() - 2 * 3600_000)), inArray(agendamento.situacao, ["agendado", "confirmado", "remarcar"])))
         .orderBy(asc(agendamento.inicio)).limit(1)
     : [];
   const [c] = await db
@@ -58,7 +61,7 @@ export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM
   const planos = await planosAtivos();
   const [base] = await db.select().from(configuracao).where(eq(configuracao.chave, "base_conhecimento"));
   const baseConhecimento = typeof base?.valor === "string" ? base.valor : "";
-  if (!c?.contatoId) return { conversaId, contato: null, oportunidade: null, contratosAtivos: [], historicoCompras: [], planos, baseConhecimento, proximaConsulta: proximaConsulta ?? null };
+  if (!c?.contatoId) return { conversaId, contato: null, oportunidade: null, contratosAtivos: [], historicoCompras: [], planos, baseConhecimento, proximaConsulta: proximaConsulta ?? null, unidade: unidadeCtx };
 
   // Oportunidade mais recente do contato (ou da empresa dele) que não esteja arquivada
   const donos = [eq(oportunidade.contatoId, c.contatoId), ...(c.empresaId ? [eq(oportunidade.empresaId, c.empresaId)] : [])];
@@ -90,6 +93,7 @@ export async function buscarContextoCRM(conversaId: string): Promise<ContextoCRM
     planos,
     baseConhecimento,
     proximaConsulta: proximaConsulta ?? null,
+    unidade: unidadeCtx,
   };
 }
 
@@ -99,6 +103,8 @@ const dataBR = (d: string) => d.split("-").reverse().join("/");
 /** Bloco de texto injetado no prompt antes da conversa. Só dados verificáveis do CRM, sem telefone ou e-mail. */
 export function formatarContexto(ctx: ContextoCRM, hoje: string, fuso = "America/Sao_Paulo"): string {
   const l: string[] = [`Data de hoje: ${dataBR(hoje)}`];
+  // Plano Rede: o paciente está falando com esta unidade; endereço e horários vêm daqui
+  if (ctx.unidade) l.push(`Unidade em atendimento: ${ctx.unidade.nome}${ctx.unidade.informacoes.trim() ? `\nInformações desta unidade: ${ctx.unidade.informacoes.trim()}` : ""}`);
   if (!ctx.contato) l.push("Contato: novo, ainda sem cadastro.");
   else l.push(`Contato: ${ctx.contato.nome}${ctx.contato.empresa ? ` (empresa: ${ctx.contato.empresa})` : ""}`);
   if (ctx.oportunidade) l.push(`Oportunidade: ${ctx.oportunidade.titulo} · etapa "${ctx.oportunidade.etapa}" · valor mensal estimado ${br(ctx.oportunidade.valor)} · situação ${ctx.oportunidade.situacao}`);

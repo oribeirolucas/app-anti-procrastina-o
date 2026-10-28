@@ -55,9 +55,9 @@ Tudo do Essencial, mais:
 Tudo do Pro, mais:
 | Entrega | Status |
 |---|---|
-| Até **3 unidades ou números** de WhatsApp, cada um com suas informações | 🔜 |
+| Até **3 unidades**, cada uma com seu número de WhatsApp, suas informações (endereço, horários, equipe) e sua agenda | ✅ |
 | Até **2.000 conversas por mês** no total | ✅ |
-| Relatório semanal por unidade | 🔜 |
+| Relatório semanal e mensal por unidade | ✅ |
 | Reunião mensal de resultados (30 min, com o fundador) | ✅ |
 | Suporte prioritário: resposta em até 2h úteis | ✅ |
 
@@ -68,13 +68,10 @@ Tudo do Pro, mais:
 - **Desconto:** os agentes podem oferecer até **10%** sem aprovação. Acima disso, a decisão é do fundador (Aprovações).
 
 ## Situação de liberação
-- **Essencial e Pro: liberados para venda** (28/10/2026). Requisito da implantação do Pro: modelos de mensagem aprovados pela Meta na conta da clínica (confirmação, retomada e reativação), em algumas horas a poucos dias.
-- **Rede: ainda não.** Faltam multiunidade (até 3 números) e relatório semanal por unidade. Até lá, clínica com 2 ou mais unidades vai para o fundador (contrato sob medida).
-- Integração direta com Google Agenda: ainda não existe; a agenda entra por planilha ou cadastro no painel.
-
-### Próximos passos (Rede)
-1. Multiunidade: vários números de WhatsApp na mesma instalação, cada um com suas informações e agenda.
-2. Relatório semanal por unidade.
+- **Essencial, Pro e Rede: liberados para venda** (28/10/2026).
+- Requisito de implantação do Pro e do Rede: modelos de mensagem aprovados pela Meta na conta da clínica (confirmação, retomada, reativação). No Rede, cada unidade precisa do seu número na API oficial, e todos podem ficar na mesma conta Meta da clínica.
+- Mais de 3 unidades: contrato sob medida com o fundador (o limite é configurável por instalação).
+- Ainda não existe: integração direta com o Google Agenda (a agenda entra por planilha ou cadastro no painel).
 
 ## Como cada time usa esta oferta
 | Time (agentes) | Usa para |
