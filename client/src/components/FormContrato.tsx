@@ -8,6 +8,8 @@ type Contrato = { id: string; versao: number; plano: string; valorMensal: string
 export type PreenchimentoContrato = { empresaId?: string | null; oportunidadeId?: string; valorMensal?: string; plano?: string };
 
 const PLANOS = ["Essencial", "Pro", "Rede", "Personalizado"];
+/** Mensalidade de tabela de cada plano; "Personalizado" mantém o valor digitado. */
+const PRECO_PLANO: Record<string, string> = { Essencial: "297,00", Pro: "597,00", Rede: "897,00" };
 const somarAno = (d: string) => `${Number(d.slice(0, 4)) + 1}${d.slice(4)}`;
 
 /** Cria (com empresa fixa ou escolhida) ou edita um contrato. */
@@ -53,7 +55,7 @@ export function FormContrato({ aoFechar, empresaId, contrato, preencher }: { aoF
           </Selecao>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <Selecao rotulo="Plano" value={PLANOS.includes(f.plano) ? f.plano : "Personalizado"} onChange={set("plano")}>{PLANOS.map((p) => <option key={p}>{p}</option>)}</Selecao>
+          <Selecao rotulo="Plano" value={PLANOS.includes(f.plano) ? f.plano : "Personalizado"} onChange={(e) => setF({ ...f, plano: e.target.value, valorMensal: PRECO_PLANO[e.target.value] ?? f.valorMensal })}>{PLANOS.map((p) => <option key={p}>{p}</option>)}</Selecao>
           <Selecao rotulo="Venda de origem" value={f.oportunidadeId} onChange={set("oportunidadeId")}>
             <option value="">—</option>
             {oportunidades.data?.filter((o) => o.empresaId === f.empresaId || o.id === f.oportunidadeId).map((o) => <option key={o.id} value={o.id}>{o.titulo}</option>)}
