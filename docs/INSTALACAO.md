@@ -41,6 +41,15 @@ Ao subir, a aplicação aplica as migrações e cria o admin do `.env` (só se a
 4. Crie os usuários do cliente (gestor/operador).
 5. Rode `scripts/backup-agora.sh` e `scripts/testar-restauracao.sh` para deixar o primeiro backup comprovado.
 
+## Perfil do nicho (o "treinamento" do time de IA do cliente)
+Modelos em `empresa/verticais/`: `clinica-estetica.json` e `imobiliaria.json`. Cada um traz o funil do nicho, a etapa do lead qualificado, a base de conhecimento a preencher e os 3 agentes (atendimento, pós-qualificação e pós-venda).
+```sh
+cp empresa/verticais/imobiliaria.json /tmp/cliente.json   # preencha os [colchetes] com o formulário de kickoff
+BASE_URL=https://SEU_DOMINIO E2E_EMAIL=admin@... E2E_SENHA=... node deploy/scripts/aplicar-perfil.mjs /tmp/cliente.json            # simulação
+BASE_URL=https://SEU_DOMINIO E2E_EMAIL=admin@... E2E_SENHA=... node deploy/scripts/aplicar-perfil.mjs /tmp/cliente.json --aplicar
+```
+Os agentes chegam **inativos**. Revise em Agentes IA, faça a bateria de testes e só então ative.
+
 ## Backup
 - **Automático:** todo dia na `BACKUP_HORA` (no fuso do cliente), em `deploy/backups/`, mantendo `BACKUP_RETENCAO_DIAS` dias.
   Cada arquivo é conferido (`pg_restore --list`) antes de ser aceito.

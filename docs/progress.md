@@ -14,6 +14,18 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 | Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
 | Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
 
+## THE LARC Company: time comercial de IA por vertical (28/10/2026)
+- Decisão do fundador: a THE LARC Company vende times comerciais de IA para qualquer negócio, por vertical. A 1ª é clínicas (Recepção IA) e a 2ª é imobiliárias (Corretor IA).
+- `empresa/MARCA.md`: missão, visão, valores, posicionamento e linha de produtos.
+  `empresa/OFERTA-IMOBILIARIAS.md`: planos do Corretor IA, com **preços em proposta** aguardando aprovação.
+- Perfil da LARC: 6 planos (Recepção IA e Corretor IA × Essencial/Pro/Rede). Os planos antigos foram renomeados com `nomeAnterior`, sem duplicar. Base de conhecimento e agentes atualizados (o SDR identifica o segmento).
+- Modelos de implantação por nicho em `empresa/verticais/`, com funil, etapa do qualificado, base a preencher e agentes inativos.
+  O script de perfil ganhou `pipeline`, `pipelineExclusivo` e `etapaQualificado`.
+- A etapa do lead qualificado agora é configurável (`etapa_qualificado`, padrão "Demonstração").
+- Verificado:
+  - `npm test` 78/78, estável em 3 rodadas. Uma intermitência criada pelo meu próprio teste novo (etapa na ordem 3) foi corrigida;
+  - modelo de imobiliária aplicado numa instalação limpa: funil, desativações, etapa do qualificado e agentes conferidos no banco.
+
 ## Plano Rede liberado (28/10/2026)
 - Migração 0014: tabela `unidade` e `unidade_id` em conversa, agendamento e campanha.
   A unicidade da conversa passou a ser (canal, número do cliente, unidade) com NULLS NOT DISTINCT; o índice antigo foi trocado.
@@ -37,7 +49,7 @@ Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ b
 - Oferta: Pro com todas as entregas disponíveis. Rede ainda falta multiunidade e relatório semanal.
 
 ## Oferta estruturada por plano (28/10/2026)
-- `empresa/OFERTA.md` define o que cada plano entrega: promessa, público, franquia, entregas e garantia. Marca **Larc Company** (empresa) e **Recepção IA** (produto).
+- `empresa/OFERTA.md` define o que cada plano entrega: promessa, público, franquia, entregas e garantia. Marca **THE LARC Company** (empresa) e **Recepção IA** (produto).
 - Os planos ganharam promessa, público ideal, franquia e entregas com status disponível ou em breve (migração 0012).
   - Os agentes recebem as entregas no contexto, com a ordem de vender só o disponível.
   - `GET /publico/oferta` serve a mesma oferta ao site, sem login e sem dados internos.

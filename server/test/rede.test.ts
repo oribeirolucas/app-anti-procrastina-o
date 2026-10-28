@@ -105,3 +105,22 @@ describe("atendimento por unidade", () => {
     expect(await codigo(a.pro.relatorio({ de: hoje, ate: somaDias(hoje, -1) }))).toBe("BAD_REQUEST");
   });
 });
+
+describe("vertical: etapa do lead qualificado configurável", () => {
+  it("imobiliária: SDR qualifica e o lead vai para 'Visita agendada'", async () => {
+    const a = await chamadorComo("admin");
+    const etapas = await a.pipeline.etapas();
+    if (!etapas.some((e) => e.nome === "Visita agendada")) await a.pipeline.salvarEtapa({ nome: "Visita agendada", ordem: 90, tipo: "aberta", probabilidade: 45 }); // fim do funil: não mexe na ordem usada por outros testes
+    await a.admin.salvarConfiguracao({ chave: "etapa_qualificado", valor: "Visita agendada" });
+    try {
+      const t = tel();
+      const r = await registrarMensagemRecebida(extrairMensagens(payload(t, "procuro apê 2 quartos no centro, até 400 mil"))[0]);
+      const llm: ProvedorLLM = { gerar: async (p) => ({ saida: { resposta: "Perfeito! O corretor vai confirmar a visita.", acoes: [{ tipo: "qualificado", descricao: "compra, 2q, centro, até 400k", percentual: null, valor: null }] }, tokensEntrada: 1, tokensSaida: 1, modeloUsado: p.modelo }) };
+      await processarConversa(r.conversaId, { provedores: { anthropic: llm }, canal: new WhatsAppDesligado("teste"), transcritor: { transcrever: async () => ({ texto: "", segundos: 0 }) }, modeloPadrao: "claude-opus-5-5" });
+      const { buscarContextoCRM } = await import("../src/services/contextService.js");
+      expect((await buscarContextoCRM(r.conversaId)).oportunidade?.etapa).toBe("Visita agendada");
+    } finally {
+      await a.admin.salvarConfiguracao({ chave: "etapa_qualificado", valor: "Demonstração" });
+    }
+  });
+});

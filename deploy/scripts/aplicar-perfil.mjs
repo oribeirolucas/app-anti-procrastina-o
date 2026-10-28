@@ -28,9 +28,26 @@ await chamar("auth.login", { email: process.env.E2E_EMAIL, senha: process.env.E2
 
 await passo(`nome da empresa: ${perfil.nomeEmpresa}`, () => chamar("admin.salvarConfiguracao", { chave: "nome_empresa", valor: perfil.nomeEmpresa }));
 
+// Funil do nicho (opcional): cria as etapas que faltam, pelo nome. Etapas existentes não são alteradas.
+if (perfil.pipeline?.length) {
+  const etapas = await chamar("pipeline.etapas", undefined, "GET");
+  for (const e of perfil.pipeline) {
+    if (etapas.some((x) => x.nome.toLowerCase() === e.nome.toLowerCase())) continue;
+    await passo(`etapa do funil: ${e.nome} (${e.tipo}, ordem ${e.ordem})`, () => chamar("pipeline.salvarEtapa", { nome: e.nome, ordem: e.ordem, tipo: e.tipo, probabilidade: e.probabilidade ?? 0, ativa: true }));
+  }
+  // pipelineExclusivo: desativa as etapas que não estão no perfil (o sistema recusa se houver oportunidades nelas)
+  if (perfil.pipelineExclusivo) for (const x of etapas.filter((x) => x.ativa !== false && !perfil.pipeline.some((e) => e.nome.toLowerCase() === x.nome.toLowerCase()))) {
+    await passo(`desativar etapa fora do funil do nicho: ${x.nome}`, () => chamar("pipeline.salvarEtapa", { id: x.id, nome: x.nome, ordem: x.ordem, tipo: x.tipo, probabilidade: x.probabilidade, ativa: false }).catch((e) => console.log(`   não desativada: ${e.message}`)));
+  }
+}
+if (perfil.etapaQualificado)
+  await passo(`lead qualificado vai para: ${perfil.etapaQualificado}`, () => chamar("admin.salvarConfiguracao", { chave: "etapa_qualificado", valor: perfil.etapaQualificado }));
+
 const planos = await chamar("planos.listar", { incluirInativos: true }, "GET");
 for (const p of perfil.planos) {
-  const atual = planos.find((x) => x.nome.toLowerCase() === p.nome.toLowerCase());
+  // nomeAnterior: renomeia o plano existente em vez de criar outro (contratos guardam o nome da época)
+  const atual = planos.find((x) => x.nome.toLowerCase() === p.nome.toLowerCase())
+    ?? (p.nomeAnterior ? planos.find((x) => x.nome.toLowerCase() === p.nomeAnterior.toLowerCase()) : undefined);
   const dados = {
     nome: p.nome, valorMensal: p.valorMensal, valorSetup: p.valorSetup, descricao: p.descricao ?? null, ordem: p.ordem ?? 0, ativo: true,
     promessa: p.promessa ?? null, publicoIdeal: p.publicoIdeal ?? null, franquiaConversas: p.franquiaConversas ?? null, entregaveis: p.entregaveis ?? [],

@@ -1,6 +1,6 @@
 import { and, asc, eq, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { agendamento, contato, conversa, etapaPipeline, execucaoAgente, interacao, mensagem, notificacao, oportunidade, tarefa, usuario } from "../db/schema.js";
+import { agendamento, configuracao, contato, conversa, etapaPipeline, execucaoAgente, interacao, mensagem, notificacao, oportunidade, tarefa, usuario } from "../db/schema.js";
 import { CONTRATO_DE_SAIDA, MENSAGEM_FALLBACK, REGRAS_COMUNS, type AreaAgente } from "../config/prompts.js";
 import { solicitarAprovacao } from "../lib/aprovacoes.js";
 import { registrarConsumo, verificarLimite } from "../lib/consumo.js";
@@ -198,7 +198,8 @@ export async function executarAcoes(acoes: AcaoAgente[], resposta: string, c: Co
       case "qualificado": {
         const o = c.ctx.oportunidade;
         if (c.area !== "marketing" || !o || o.situacao !== "aberta") break;
-        if (await moverParaDemonstracao(o.id, o.versao, a.descricao ?? "Lead qualificado pela IA")) efeitos.push("lead movido para Demonstração");
+        const etapa = await moverParaEtapaQualificado(o.id, o.versao, a.descricao ?? "Lead qualificado pela IA");
+        if (etapa) efeitos.push(`lead movido para ${etapa}`);
         break;
       }
       case "oferecer_desconto": {
@@ -260,18 +261,23 @@ export async function executarAcoes(acoes: AcaoAgente[], resposta: string, c: Co
 
 const valorOuNada = (v: string | null) => (v && /^\d+([.,]\d{1,2})?$/.test(v.trim()) ? v.trim().replace(",", ".") : undefined);
 
-/** Mesmo efeito de "Mover etapa" na tela: versão, histórico e evento (dispara as automações da etapa). */
-async function moverParaDemonstracao(oportunidadeId: string, versao: number, resumo: string) {
-  const [para] = await db.select().from(etapaPipeline).where(and(ilike(etapaPipeline.nome, "demonstra%"), eq(etapaPipeline.ativa, true))).limit(1);
-  if (!para) return false;
+/**
+ * Mesmo efeito de "Mover etapa" na tela: versão, histórico e evento (dispara as automações da etapa).
+ * Destino configurável por instalação (ex.: "Demonstração" para clínicas, "Visita agendada" para imobiliárias).
+ */
+async function moverParaEtapaQualificado(oportunidadeId: string, versao: number, resumo: string): Promise<string | null> {
+  const [cfg] = await db.select().from(configuracao).where(eq(configuracao.chave, "etapa_qualificado"));
+  const nome = typeof cfg?.valor === "string" && cfg.valor.trim() ? cfg.valor.trim() : "Demonstração";
+  const [para] = await db.select().from(etapaPipeline).where(and(ilike(etapaPipeline.nome, nome), eq(etapaPipeline.ativa, true), eq(etapaPipeline.tipo, "aberta"))).limit(1);
+  if (!para) return null;
   return db.transaction(async (tx) => {
     const [o] = await tx.update(oportunidade)
       .set({ etapaId: para.id, situacao: para.tipo, versao: sql`${oportunidade.versao} + 1`, atualizadoEm: new Date() })
       .where(and(eq(oportunidade.id, oportunidadeId), eq(oportunidade.versao, versao), eq(oportunidade.situacao, "aberta")))
       .returning();
-    if (!o) return false;
+    if (!o) return null;
     await tx.insert(interacao).values({ tipo: "alteracao", descricao: `Etapa → "${para.nome}" pela IA (SDR). ${resumo}`.slice(0, 2000), oportunidadeId: o.id, empresaId: o.empresaId, contatoId: o.contatoId });
     await emitirEvento("oportunidade.etapa_alterada", { oportunidadeId: o.id, paraEtapaId: para.id }, undefined, tx);
-    return true;
+    return para.nome;
   });
 }

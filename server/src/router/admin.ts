@@ -94,7 +94,8 @@ export const adminRouter = router({
   configuracoes: comPermissao("config:gerir").query(() => db.select().from(configuracao)),
 
   salvarConfiguracao: comPermissao("config:gerir")
-    .input(z.object({ chave: z.enum(["fuso_horario", "nome_empresa"]), valor: z.string().trim().min(1).max(120) }))
+    // etapa_qualificado: nome da etapa para onde o SDR de IA move o lead qualificado (padrão "Demonstração")
+    .input(z.object({ chave: z.enum(["fuso_horario", "nome_empresa", "etapa_qualificado"]), valor: z.string().trim().min(1).max(120) }))
     .mutation(async ({ ctx, input }) => {
       if (input.chave === "fuso_horario") {
         try { new Intl.DateTimeFormat("pt-BR", { timeZone: input.valor }); }
