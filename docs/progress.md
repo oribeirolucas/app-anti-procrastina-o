@@ -1,0 +1,192 @@
+# Progresso
+
+Legenda: ✅ implementado e testado · 🧪 implementado, teste parcial · ⛔ bloqueado (dependência externa) · ⏳ não iniciado
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Fundação F1–F5 | ✅ | `server/test/fundacao.test.ts`, `/saude` e `x-request-id` verificados via curl |
+| CRM C1 | ✅ | `client/e2e/jornada-crm.cjs`: 9 passos no navegador, incluindo recarga e celular |
+| CRM C2–C7 | ✅ | `server/test/integridade.test.ts`, `server/test/crm.test.ts` |
+| CRM C8 | ✅ | `crm.test.ts` (indicadores), fórmulas em `docs/INDICADORES.md` |
+| Contratos K1–K7 | ✅ | `server/test/contratos.test.ts` (6 cenários) e `client/e2e/jornada-contratos.cjs` (7 passos, inclui celular) |
+| Financeiro R1–R7 | ✅ | `server/test/financeiro.test.ts` (7 cenários) e `client/e2e/jornada-financeiro.cjs` (6 passos no navegador) |
+| Automações A1–A7 | ✅ | `server/test/automacoes.test.ts` (10 cenários) e `client/e2e/jornada-automacoes.cjs` (7 passos) |
+| Agente de IA I1–I5 | ⛔ parcial | estrutura pode ser feita. Respostas reais exigem `ANTHROPIC_API_KEY` |
+| Instalação por cliente (Docker, HTTPS, backup e restauração) | ✅ | `Dockerfile` e `deploy/`: compose subido e conferido. Backup, teste de restauração e restauração real executados. Ver `docs/INSTALACAO.md` |
+
+## THE LARC Company: time comercial de IA por vertical (28/10/2026)
+- Decisão do fundador: a THE LARC Company vende times comerciais de IA para qualquer negócio, por vertical. A 1ª é clínicas (Recepção IA) e a 2ª é imobiliárias (Corretor IA).
+- `empresa/MARCA.md`: missão, visão, valores, posicionamento e linha de produtos.
+  `empresa/OFERTA-IMOBILIARIAS.md`: planos do Corretor IA, com **preços em proposta** aguardando aprovação.
+- Perfil da LARC: 6 planos (Recepção IA e Corretor IA × Essencial/Pro/Rede). Os planos antigos foram renomeados com `nomeAnterior`, sem duplicar. Base de conhecimento e agentes atualizados (o SDR identifica o segmento).
+- Modelos de implantação por nicho em `empresa/verticais/`, com funil, etapa do qualificado, base a preencher e agentes inativos.
+  O script de perfil ganhou `pipeline`, `pipelineExclusivo` e `etapaQualificado`.
+- A etapa do lead qualificado agora é configurável (`etapa_qualificado`, padrão "Demonstração").
+- Verificado:
+  - `npm test` 78/78, estável em 3 rodadas. Uma intermitência criada pelo meu próprio teste novo (etapa na ordem 3) foi corrigida;
+  - modelo de imobiliária aplicado numa instalação limpa: funil, desativações, etapa do qualificado e agentes conferidos no banco.
+
+## Plano Rede liberado (28/10/2026)
+- Migração 0014: tabela `unidade` e `unidade_id` em conversa, agendamento e campanha.
+  A unicidade da conversa passou a ser (canal, número do cliente, unidade) com NULLS NOT DISTINCT; o índice antigo foi trocado.
+- Envio pelo número da unidade (`de` no canal), contexto com as informações da unidade e importação da agenda com coluna `unidade` (erro por linha se não existir).
+- Telas: aba Unidades em Administração; filtro de unidade no Inbox, na Agenda, na Reativação e em Relatórios (agora mensal ou semanal).
+- Verificado: `npm test` 77/77, estável em 2 rodadas. O novo `rede.test.ts` cobre: limite e número único, conversa separada por unidade, resposta pelo número certo com as informações da unidade, lembrete pela unidade, importação com unidade inválida e relatório semanal por unidade.
+  Roteiro no navegador cobrindo cadastro com validação e filtros.
+- Oferta: os 3 planos agora têm todas as entregas disponíveis.
+
+## Plano Pro liberado (28/10/2026)
+- Migração 0013: `retomada`, `agendamento`, `campanha`, `campanha_destinatario` e `mensagem.origem`.
+  A origem impede que retomada, lembrete ou campanha virem "última resposta" e entrem em laço.
+- Serviços e telas:
+  - `services/recursosProService.ts` (retomada, lembretes, campanhas), executado no ciclo do atendimento;
+  - `router/operacao/pro.ts`;
+  - telas Agenda, Reativação e Relatório mensal, e a aba Recursos Pro em Administração.
+- Verificado:
+  - `npm test` 73/73, estável em 3 rodadas. O novo `pro.test.ts` cobre: janela de 24h, modelo obrigatório, idempotência, parada na resposta, opt-out, humano, lembrete uma vez a partir da hora, resposta cancelando a consulta, importação com erro por linha, campanha bloqueada até o Go e só admin aprovando;
+  - roteiro no navegador cobrindo configuração inválida e válida, importação com prévia, campanha até Aprovações e relatório.
+- Bug encontrado e corrigido: a Agenda mostrava a hora no fuso do navegador e não no da clínica.
+- Oferta: Pro com todas as entregas disponíveis. Rede ainda falta multiunidade e relatório semanal.
+
+## Oferta estruturada por plano (28/10/2026)
+- `empresa/OFERTA.md` define o que cada plano entrega: promessa, público, franquia, entregas e garantia. Marca **THE LARC Company** (empresa) e **Recepção IA** (produto).
+- Os planos ganharam promessa, público ideal, franquia e entregas com status disponível ou em breve (migração 0012).
+  - Os agentes recebem as entregas no contexto, com a ordem de vender só o disponível.
+  - `GET /publico/oferta` serve a mesma oferta ao site, sem login e sem dados internos.
+- Regra fixa nova: o agente não nega ser IA se perguntarem.
+- Verificado: `npm test` 66/66 (oferta no contexto, endpoint público e limite de entregas) e tela de Planos no navegador.
+- O Pro e o Rede ainda têm entregas "em breve" que precisam ser construídas para sustentar o preço (ordem em OFERTA.md).
+
+## A empresa vende a Recepção IA (28/10/2026)
+- Decisão: a plataforma (white-label) é o CRM de gestão. A Recepção IA é a empresa que a opera e vende a recepcionista de IA para clínicas de estética.
+- Perfil versionado em `empresa/perfil-crm.json`: nome, planos Essencial, Pro e Rede, base de conhecimento e prompts do SDR, Closer e CS.
+  Aplicado por `deploy/scripts/aplicar-perfil.mjs`, de forma idempotente (atualiza pelo nome e nunca apaga).
+- Nova base de conhecimento compartilhada (Agentes IA), injetada no contexto de todos os agentes. Edições são auditadas.
+- Decisão registrada: desconto sem aprovação é de **10%**, a regra mais recente, imposta pelo sistema. O documento antigo do Closer dizia 20%.
+- A base de conhecimento declara o que ainda NÃO é oferecido (marcação automática na agenda), para os agentes não venderem o que não existe.
+
+## Transcrição de áudio com ChatGPT (28/10/2026)
+- O Claude conversa e o ChatGPT transcreve. Agentes só aceitam Claude.
+- O áudio do WhatsApp é baixado da Meta e transcrito pela OpenAI (SDK oficial `openai`, modelo `gpt-4o-transcribe` configurável) antes do agente responder.
+- Migração 0011: colunas de mídia na mensagem e recurso `transcricao_segundos` na franquia.
+- Verificado: `npm test` 65/65, com 2 cenários novos (áudio transcrito e respondido; falha de transcrição com o agente pedindo texto).
+
+## Motor de atendimento autônomo (28/10/2026)
+- Arquivos novos:
+  - `webhooks/whatsapp.ts`;
+  - `services/{contextService, agentRouter, llmService, whatsappService, atendimentoService, container}.ts`;
+  - `config/prompts.ts`;
+  - migração 0010 (fila e trava nas mensagens e conversas).
+- LLM: SDK oficial `@anthropic-ai/sdk`, com saída estruturada validada por Zod e fallback do servidor em caso de recusa. Modelo padrão `claude-opus-5-5`.
+- Verificado com `npm test` 63/63, estável em 5 rodadas seguidas. O novo `atendimento.test.ts` usa dublês para LLM e WhatsApp e cobre:
+  - roteador;
+  - webhook: lead novo, mensagem duplicada, assinatura e verificação da Meta;
+  - memória com 15 mensagens;
+  - SDR qualificando e movendo de etapa;
+  - Closer: 8% passa e 20% vira aprovação;
+  - IA fora do ar cai no fallback e passa para humano;
+  - franquia bloqueada;
+  - concorrência.
+- Não verificado (depende de credenciais): chamada real ao Claude e envio real pela Meta.
+
+## Operação por IA: 5 módulos (28/10/2026)
+- Barra lateral com ícones (lucide-react) e grupos: Comercial, Operação por IA e Gestão.
+- Telas novas:
+  - Aprovações: Go/No-Go;
+  - Agentes IA: cards, edição de prompt e LLM, logs;
+  - Inbox WhatsApp: conversas lado a lado;
+  - Marketing: CPL, CAC e orçamento diário;
+  - Customer Success: health score e alertas.
+- Banco: migração 0009 (`agente`, `execucao_agente`, `solicitacao_aprovacao`, `conversa`, `mensagem`), com CHECKs e índices de idempotência.
+- Verificado:
+  - `npm test` 53/53 (novo `operacao.test.ts`);
+  - roteiro no navegador cobrindo as 5 telas: No-Go com motivo obrigatório, edição de agente, inbox e celular sem rolagem lateral;
+  - E2E antigos OK.
+- O que ainda não gera dados: execução dos agentes (falta a chave do provedor), WhatsApp (falta a API da Meta) e chamados de suporte.
+  As telas mostram isso com aviso explícito, sem dados fictícios.
+
+## Instalação por cliente (28/10/2026)
+- `Dockerfile` (front-end e API numa imagem, ~395 MB) e `deploy/docker-compose.yml`: app, PostgreSQL 16 sem porta exposta, Caddy com HTTPS automático e serviço de backup diário.
+- Scripts em `deploy/scripts/`: backup-agora, testar-restauracao, restaurar (com backup de segurança e confirmação) e atualizar (backup, build e checagem de saúde).
+- Verificado aqui com Docker, usando HTTPS local:
+  - stack saudável e login pela interface;
+  - backup gerado e conferido;
+  - teste de restauração em banco temporário: 1 empresa no backup e 2 no banco em uso;
+  - restauração real voltou a 1 empresa, com login funcionando depois;
+  - dados persistem ao recriar contêineres;
+  - agenda de backup no fuso do cliente.
+- **Não verificado aqui:**
+  - certificado real do Let's Encrypt (exige domínio público);
+  - cópia externa via rclone (exige bucket);
+  - `atualizar.sh` de ponta a ponta (a rede deste ambiente exige proxy no build).
+
+## Franquia de uso (28/10/2026)
+- Tabela `consumo_uso` (migração 0008), `lib/consumo.ts` (`registrarConsumo`, `verificarLimite`) e tela Administração → Uso e limites.
+- Verificado: `npm test` 47/47 (novo `consumo.test.ts`: idempotência, avisos 80/100% sem duplicar, bloqueio, permissões) e tela conferida no navegador.
+- Ainda sem fonte de consumo real: o agente de IA e o WhatsApp vão chamar `verificarLimite` antes e `registrarConsumo` depois de cada ação paga.
+
+## Mudança de rumo (28/10/2026): white-label, modelo A
+- Removida a marca Recepção IA e os textos de clínica: nome da empresa vem de Admin → Configurações (`auth.marca`, público).
+- Catálogo de planos (`plano`, migração 0007) em Admin → Planos e preços. O contrato preenche mensalidade e setup a partir dele.
+- Segmento da empresa virou texto livre. Dados fictícios e categorias padrão agora são neutros.
+- Verificado: `npm test` 45/45 (novo `planos.test.ts`), `tsc` ok no server e no client, lint sem erros,
+  E2E local crm/financeiro/automacoes/contratos OK e roteiro de navegador nome → plano → contrato preenchido.
+- Pendente: limpar os dados fictícios do link de teste (aguarda sua confirmação no Supabase) e aplicar lá a migração 0007.
+
+## Últimas verificações executadas (27/10/2026)
+- `server`: `npm test` passou (27 testes: fundação, CRM, integridade e financeiro) e `tsc --noEmit` ok.
+- E2E `jornada-financeiro.cjs`: 6/6 (despesa → baixa com diferença → painel → rastreio → geração idempotente → operador bloqueado).
+- Navegação da Administração conferida no navegador após correção dos links relativos.
+- Migrações 0002 (empresa nome+cidade) e 0003 (financeiro, com 7 restrições CHECK) aplicadas no banco de desenvolvimento.
+- `client`: `tsc -b` ok, `vite build` ok, `oxlint` sem erros.
+- E2E `jornada-crm.cjs` contra servidor local: 9/9 passos (repetido em 27/10).
+- Migração 0001 aplicada no banco de desenvolvimento existente. A verificação prévia detectou um nome
+  duplicado real (gerado por teste), que foi renomeado, não apagado.
+
+## Limitações conhecidas
+- Indicadores do painel não têm link para a lista filtrada de oportunidades (só para o pipeline geral).
+- Sem paginação no quadro do pipeline (limite de 500 oportunidades abertas carregadas).
+- Backup/restauração ainda não implementados. **Não usar com dados reais antes da etapa 6.**
+- Geração de cobranças é manual (botão por mês). Automatizar no dia 1 entra na etapa 4 (automações).
+- Painel financeiro não tem gráfico de linha. As barras mês a mês são clicáveis.
+- Sem conciliação bancária nem emissão de boleto/NF (fora do escopo atual).
+
+## Próximo passo
+Etapa 5, agente de IA (I1–I8). Bloqueio: precisa da `ANTHROPIC_API_KEY` (custo por uso). Sem a chave, é possível construir a base de conhecimento, os casos de transferência, as regras obrigatórias e a aprovação de propostas, deixando a chamada ao modelo para o fim.
+
+## Ambiente de teste publicado (27/10/2026)
+- URL: https://plataforma-comercial-demo.vercel.app (Vercel, time `larc21`, projeto `recepcao-ia-teste`), banco Supabase `recepcao-ia-teste` (sa-east-1).
+- Migrações 0000–0003 aplicadas via API do Supabase. Schema conferido idêntico ao local (hash de 220 itens).
+  **Atenção:** esse banco não tem a tabela de controle do Drizzle. Novas migrações ali devem ser aplicadas uma a uma, da mesma forma.
+- A aplicação usa o usuário de banco `app_crm` (só DML). `anon`/`authenticated` sem acesso às tabelas.
+- Verificado no link: `/saude` 200, `jornada-crm.cjs` 9/9, `jornada-financeiro.cjs` 6/6, pedido de outra origem 403, sem login 401, cabeçalhos de segurança presentes.
+- Limitações: TLS com o banco sem verificação de certificado (`uselibpqcompat` + `sslmode=require`), função em iad1 e banco em sa-east-1 (latência), sem backup. Só dados fictícios.
+- Resolvido em 27/10: drizzle-orm 0.45.4, drizzle-kit 0.31.11, zod 4.6.7 (`npm audit --omit=dev`: 0 vulnerabilidades).
+
+## Etapa 4: automações (27/10/2026)
+- Verificado: `npm test` 37/37 (inclui 10 de automações). E2E `jornada-automacoes.cjs` 7/7, `jornada-crm.cjs` 9/9 e `jornada-financeiro.cjs` 6/6 no servidor local.
+- Cobertos por teste: sem duplicidade (índice único por automação+evento), condições, pausa, follow-up com passos e paradas
+  (resposta, descadastro com rechecagem no passo, oportunidade encerrada), 5 tentativas com espera crescente e estado "falhou"
+  com reprocessamento manual, vencimento de contrato sem repetir, webhook HMAC (válido, inválido, reenvio, rotação, revogação),
+  formulário público (domínio, armadilha anti-robô, duplicado do dia, limite por IP), permissões.
+- Bug encontrado no E2E e corrigido: telas não mostravam os efeitos das automações sem recarregar.
+- Limitações: ações apenas internas (tarefa, aviso, follow-up), sem envio de WhatsApp ou e-mail. Na Vercel, os passos de follow-up
+  vencidos rodam na próxima alteração feita por alguém ou pelo botão "Processar agora" (não há processo contínuo). Na VPS, a cada 30 s.
+- Pendente de decisão: indicador/gatilho "bola do nosso lado" e follow-up que muda conforme a resposta (perguntados ao responsável).
+- Ambiente de teste (27/10): migração 0004 aplicada no Supabase (schema idêntico, hash de 308 itens), `TRUST_PROXY=1` na Vercel.
+  Bug encontrado só na Vercel e corrigido: `/webhooks` e `/tarefas` não eram roteados para a função (respondiam 405).
+  No link: `jornada-automacoes.cjs` 7/7, `jornada-financeiro.cjs` OK, `jornada-crm.cjs` OK em 2 de 3 execuções
+  (a primeira terminou sem resultado visível; provável lentidão iad1↔sa-east, não reproduzida). Observar.
+
+## Aba Contratos funcional (27/10/2026)
+- Antes: lista somente leitura. Agora: criar pela aba e a partir de venda ganha, editar, renovar, suspender/reativar, cancelar com
+  motivo (opcional: cancelar cobranças futuras), saúde financeira por contrato, histórico e indicadores no topo.
+- Migrações 0005 (versão, motivo, data de cancelamento, observações) e 0006 (CHECK de situação e vigência, com verificação prévia).
+- Verificado: `npm test` 43/43. E2E local: contratos 7/7, CRM 9/9, financeiro e automações OK.
+- Ambiente de teste: migrações 0005 e 0006 aplicadas, deploy feito. A jornada de contratos falhou no link real no passo
+  "cancelar" (passou local): condição de corrida. A ação seguinte saía com a versão antiga antes do recarregamento, em rede lenta.
+  Corrigido (o detalhe aplica a versão devolvida na hora e bloqueia ações enquanto recarrega). Mesma correção na tela da oportunidade.
+  Depois da correção: contratos 2/2 rodadas no link. CRM, financeiro e automações OK no link.
+- Intermitência das jornadas no link investigada até a causa (27/10): não era o sistema. O teste esperava o texto digitado,
+  que o Playwright encontrava no próprio campo, e recarregava a página com o envio ainda em andamento. Reproduzido localmente com
+  `RETARDO_MS=700` (4/4 falhas) e corrigido nos testes (CRM e automações). Depois: 9/9 com rede lenta simulada e 8/8 no link.

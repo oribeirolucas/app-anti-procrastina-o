@@ -1,0 +1,64 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd server && npm ci --include=dev && cd ../client && npm ci --include=dev",
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "server/src/**"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/trpc/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/publico/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/api/webhooks/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/webhooks/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/tarefas/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/saude",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"
+        }
+      ]
+    }
+  ]
+}

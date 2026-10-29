@@ -1,0 +1,95 @@
+# Instalação de UM cliente: aplicação + PostgreSQL + HTTPS automático + backup diário.
+# Uso: cp .env.example .env  (preencha)  →  docker compose up -d --build
+name: plataforma
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: plataforma
+      POSTGRES_USER: plataforma
+      POSTGRES_PASSWORD: ${DB_SENHA:?defina DB_SENHA no .env}
+    volumes:
+      - dados_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plataforma -d plataforma"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Sem porta publicada: o banco só é acessível pela rede interna do compose.
+
+  app:
+    build: ..
+    image: plataforma-app:${VERSAO:-local}
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://plataforma:${DB_SENHA}@db:5432/plataforma
+      ORIGEM_APP: https://${DOMINIO:?defina DOMINIO no .env}
+      TRUST_PROXY: "1"
+      FUSO_HORARIO: ${FUSO_HORARIO:-America/Sao_Paulo}
+      SESSAO_HORAS: ${SESSAO_HORAS:-12}
+      WORKER_INTERVALO_S: ${WORKER_INTERVALO_S:-30}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_SENHA: ${ADMIN_SENHA:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MODELO_IA_PADRAO: ${MODELO_IA_PADRAO:-claude-opus-5-5}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      WHATSAPP_GRAPH_VERSAO: ${WHATSAPP_GRAPH_VERSAO:-v21.0}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LIMITE_UNIDADES: ${LIMITE_UNIDADES:-3}
+      OPENAI_MODELO_TRANSCRICAO: ${OPENAI_MODELO_TRANSCRICAO:-gpt-4o-transcribe}
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMINIO: ${DOMINIO}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - dados_caddy:/data
+      - config_caddy:/config
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      PGHOST: db
+      PGUSER: plataforma
+      PGPASSWORD: ${DB_SENHA}
+      PGDATABASE: plataforma
+      # Hora do backup e nomes dos arquivos no fuso do cliente (o contêiner usa UTC por padrão)
+      TZ: ${FUSO_HORARIO:-America/Sao_Paulo}
+      BACKUP_HORA: ${BACKUP_HORA:-03}
+      BACKUP_RETENCAO_DIAS: ${BACKUP_RETENCAO_DIAS:-14}
+      # Cópia externa opcional (S3, Backblaze B2, Google Drive...) via rclone. Ver docs/INSTALACAO.md.
+      RCLONE_DESTINO: ${RCLONE_DESTINO:-}
+      RCLONE_CONFIG_REMOTO_TYPE: ${RCLONE_TIPO:-}
+      RCLONE_CONFIG_REMOTO_PROVIDER: ${RCLONE_PROVEDOR:-}
+      RCLONE_CONFIG_REMOTO_ACCESS_KEY_ID: ${RCLONE_CHAVE:-}
+      RCLONE_CONFIG_REMOTO_SECRET_ACCESS_KEY: ${RCLONE_SEGREDO:-}
+      RCLONE_CONFIG_REMOTO_ENDPOINT: ${RCLONE_ENDPOINT:-}
+      RCLONE_CONFIG_REMOTO_REGION: ${RCLONE_REGIAO:-}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup-loop.sh:/backup-loop.sh:ro
+      - ./scripts/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "/backup-loop.sh"]
+
+volumes:
+  dados_db:
+  dados_caddy:
+  config_caddy:

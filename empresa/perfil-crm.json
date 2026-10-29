@@ -1,0 +1,257 @@
+{
+  "nomeEmpresa": "THE LARC Company",
+  "planos": [
+    {
+      "nome": "Recepção IA Essencial",
+      "valorMensal": "297,00",
+      "valorSetup": "497,00",
+      "ordem": 1,
+      "descricao": null,
+      "promessa": "Nenhum paciente sem resposta",
+      "publicoIdeal": "Clínicas de estética: clínica com 1 unidade e até ~300 conversas por mês",
+      "franquiaConversas": 300,
+      "entregaveis": [
+        {
+          "item": "Recepcionista virtual 24h no WhatsApp oficial da clínica (API oficial da Meta, na conta da clínica)",
+          "disponivel": true
+        },
+        {
+          "item": "Responde em segundos sobre procedimentos, valores, horários, endereço e formas de pagamento, só com as informações aprovadas pela clínica",
+          "disponivel": true
+        },
+        {
+          "item": "Entende áudio (o paciente pode mandar áudio)",
+          "disponivel": true
+        },
+        {
+          "item": "Qualifica o interesse (procedimento, melhor dia e horário) e entrega o contato pronto para a recepção agendar",
+          "disponivel": true
+        },
+        {
+          "item": "Passa para um humano quando o paciente pede ou o assunto sai do roteiro",
+          "disponivel": true
+        },
+        {
+          "item": "Painel para a clínica acompanhar todas as conversas",
+          "disponivel": true
+        },
+        {
+          "item": "Implantação em até 72h com bateria de testes",
+          "disponivel": true
+        },
+        {
+          "item": "1 ajuste de conteúdo por mês (preços, procedimentos e horários)",
+          "disponivel": true
+        },
+        {
+          "item": "Suporte por WhatsApp em horário comercial",
+          "disponivel": true
+        }
+      ],
+      "nomeAnterior": "Essencial"
+    },
+    {
+      "nome": "Recepção IA Pro",
+      "valorMensal": "597,00",
+      "valorSetup": "497,00",
+      "ordem": 2,
+      "descricao": null,
+      "promessa": "Mais pacientes na cadeira",
+      "publicoIdeal": "Clínicas de estética: clínica com 1 unidade, agenda cheia e muitas faltas",
+      "franquiaConversas": 800,
+      "entregaveis": [
+        {
+          "item": "Tudo do Essencial",
+          "disponivel": true
+        },
+        {
+          "item": "Ajustes de conteúdo ilimitados, aplicados em até 1 dia útil",
+          "disponivel": true
+        },
+        {
+          "item": "Relatório mensal de resultados: conversas, atendimentos fora do horário, novos contatos, confirmações, faltas e reativados",
+          "disponivel": true
+        },
+        {
+          "item": "Retomada automática de quem perguntou e não agendou (até 2 mensagens, respeitando quem pede para parar)",
+          "disponivel": true
+        },
+        {
+          "item": "Confirmação de consultas no dia anterior, contra faltas",
+          "disponivel": true
+        },
+        {
+          "item": "Campanha mensal de reativação de pacientes inativos (lista enviada pela clínica)",
+          "disponivel": true
+        }
+      ],
+      "nomeAnterior": "Pro"
+    },
+    {
+      "nome": "Recepção IA Rede",
+      "valorMensal": "897,00",
+      "valorSetup": "497,00",
+      "ordem": 3,
+      "descricao": null,
+      "promessa": "Todas as unidades no mesmo padrão",
+      "publicoIdeal": "Clínicas de estética: clínicas com 2 ou mais unidades ou alto volume",
+      "franquiaConversas": 2000,
+      "entregaveis": [
+        {
+          "item": "Tudo do Pro",
+          "disponivel": true
+        },
+        {
+          "item": "Até 3 unidades, cada uma com seu número de WhatsApp, suas informações (endereço, horários, equipe) e sua agenda",
+          "disponivel": true
+        },
+        {
+          "item": "Relatório semanal e mensal por unidade",
+          "disponivel": true
+        },
+        {
+          "item": "Reunião mensal de resultados (30 min) com o fundador",
+          "disponivel": true
+        },
+        {
+          "item": "Suporte prioritário: resposta em até 2h úteis",
+          "disponivel": true
+        }
+      ],
+      "nomeAnterior": "Rede"
+    },
+    {
+      "nome": "Corretor IA Essencial",
+      "valorMensal": "397,00",
+      "valorSetup": "697,00",
+      "ordem": 11,
+      "promessa": "Nenhum lead sem resposta",
+      "publicoIdeal": "Imobiliárias e corretores: 1 loja, até ~300 conversas por mês",
+      "franquiaConversas": 300,
+      "entregaveis": [
+        {
+          "item": "Atendimento 24h no WhatsApp oficial da imobiliária, em segundos",
+          "disponivel": true
+        },
+        {
+          "item": "Qualifica: compra ou aluguel, tipo de imóvel, região, faixa de valor, financiamento e prazo",
+          "disponivel": true
+        },
+        {
+          "item": "Entende áudio",
+          "disponivel": true
+        },
+        {
+          "item": "Entrega o lead qualificado ao corretor com resumo (tarefa e aviso)",
+          "disponivel": true
+        },
+        {
+          "item": "Passa para humano quando o cliente pede ou o assunto sai do roteiro",
+          "disponivel": true
+        },
+        {
+          "item": "Painel com todas as conversas e o funil",
+          "disponivel": true
+        },
+        {
+          "item": "Implantação em até 72h",
+          "disponivel": true
+        }
+      ]
+    },
+    {
+      "nome": "Corretor IA Pro",
+      "valorMensal": "797,00",
+      "valorSetup": "697,00",
+      "ordem": 12,
+      "promessa": "Mais visitas, mais fechamentos",
+      "publicoIdeal": "Imobiliárias: volume alto e visitas que furam",
+      "franquiaConversas": 800,
+      "entregaveis": [
+        {
+          "item": "Tudo do Essencial",
+          "disponivel": true
+        },
+        {
+          "item": "Agenda de visitas (cadastro ou planilha) com confirmação na véspera",
+          "disponivel": true
+        },
+        {
+          "item": "Retomada de quem perguntou e sumiu",
+          "disponivel": true
+        },
+        {
+          "item": "Reativação de base (clientes antigos e leads frios), só após aprovação",
+          "disponivel": true
+        },
+        {
+          "item": "Relatório mensal: leads, qualificados, visitas, confirmações e faltas",
+          "disponivel": true
+        }
+      ]
+    },
+    {
+      "nome": "Corretor IA Rede",
+      "valorMensal": "1197,00",
+      "valorSetup": "697,00",
+      "ordem": 13,
+      "promessa": "Todas as lojas no mesmo padrão",
+      "publicoIdeal": "Imobiliárias com 2 ou 3 lojas ou equipes",
+      "franquiaConversas": 2000,
+      "entregaveis": [
+        {
+          "item": "Tudo do Pro",
+          "disponivel": true
+        },
+        {
+          "item": "Até 3 lojas ou equipes, cada uma com seu número, suas informações e sua agenda",
+          "disponivel": true
+        },
+        {
+          "item": "Relatório semanal por loja",
+          "disponivel": true
+        },
+        {
+          "item": "Reunião mensal de resultados e suporte prioritário",
+          "disponivel": true
+        },
+        {
+          "item": "Busca automática no estoque de imóveis",
+          "disponivel": false
+        },
+        {
+          "item": "Integração direta com portais (ZAP, Viva Real, OLX)",
+          "disponivel": false
+        },
+        {
+          "item": "Distribuição automática de leads entre corretores (rodízio)",
+          "disponivel": false
+        }
+      ]
+    }
+  ],
+  "baseConhecimento": "EMPRESA\nTHE LARC Company monta e opera times comerciais de inteligência artificial no WhatsApp: agentes que atendem em segundos, qualificam, agendam, vendem e cuidam dos clientes 24 horas, com o dono no comando (decisões fora da alçada passam por aprovação dele). A própria LARC funciona assim. Missão: nenhum cliente sem resposta.\nO serviço é gerenciado: nós implantamos, treinamos os agentes no negócio do cliente e acompanhamos. O cliente não precisa mexer em sistema.\n\nPRODUTOS (um por vertical; identifique o segmento do lead antes de apresentar)\n- Recepção IA: para clínicas de estética. Planos \"Recepção IA Essencial/Pro/Rede\".\n- Corretor IA: para imobiliárias e corretores. Planos \"Corretor IA Essencial/Pro/Rede\".\n- Outros segmentos: squad sob medida, avaliado pelo fundador (registre transferir_humano com o segmento, o volume de atendimentos e a dor).\n\nPLANOS E PREÇOS\nUse somente os planos do contexto e só as entregas marcadas como \"Entrega hoje\". Setup único, isento na contratação anual. Sem fidelidade no mensal.\nComo indicar o plano (vale para os dois produtos): 1 unidade com até ~300 conversas/mês → Essencial; muitas faltas/visitas que furam ou clientes que somem → Pro; 2 ou 3 unidades/lojas → Rede. Mais de 3 → fundador (transferir_humano).\nFranquia: avisamos em 80% e 100% e oferecemos o upgrade; nunca cortamos o atendimento sem avisar.\n\nCOMO FUNCIONA\n1. Diagnóstico e demonstração (cerca de 20 minutos).\n2. Implantação em até 72 horas após o pagamento: coletamos produtos/serviços, valores, horários, políticas e tom de voz; conectamos o número oficial do WhatsApp (API oficial da Meta, na conta do próprio cliente); bateria de testes antes de ligar.\n3. O cliente acompanha todas as conversas e pode assumir qualquer atendimento.\nRequisito dos planos Pro e Rede: modelos de mensagem aprovados pela Meta na conta do cliente (horas a poucos dias, feito na implantação). A agenda entra por planilha ou cadastro no painel; integração direta com Google Agenda ainda não existe.\n\nGARANTIA\n30 dias: se o cliente não ficar satisfeito no primeiro mês, devolvemos a mensalidade desse mês.\n\nO QUE AINDA NÃO OFERECEMOS (não prometa)\n- Integração direta com Google Agenda.\n- Corretor IA: busca automática no estoque de imóveis, integração direta com portais (ZAP, Viva Real, OLX) e distribuição automática de leads entre corretores.\n- Resultados garantidos em número de vendas, consultas ou faturamento.\n\nCOMO FALAR DE RETORNO (ROI)\nNunca afirme estatística de mercado como fato. Faça a conta com os números do lead:\n- Clínica: \"se a IA recuperar 2 avaliações por mês que hoje se perdem por demora, e cada uma vale R$ X...\" (pergunte o ticket médio).\n- Imobiliária: \"se o Corretor IA recuperar 1 negócio a mais por trimestre, com comissão média de R$ X...\" (pergunte a comissão média e quantos leads chegam por mês).\n\nOBJEÇÕES FREQUENTES\n- \"IA é fria\": o tom é configurado com o cliente, o agente se apresenta como assistente virtual e passa para uma pessoa quando pedem. Ofereça mostrar uma conversa de exemplo na demonstração.\n- \"Já tenho secretária/corretores\": a IA não substitui a equipe; cobre noite, fim de semana e picos, e entrega os contatos já qualificados.\n- \"Está caro\": faça a conta do retorno com os números do lead; lembre a garantia de 30 dias.\n- \"Vou pensar\": proponha a demonstração ou o teste com a garantia.\n- \"E os dados (LGPD)?\": número e conversas ficam na conta oficial do cliente; usamos a API oficial da Meta; as conversas ficam registradas para o cliente auditar.\n\nCONTATO HUMANO\nO fundador conduz as demonstrações e decide condições especiais. Descontos acima de 10% sempre passam por aprovação.",
+  "agentes": [
+    {
+      "nome": "SDR LARC",
+      "area": "marketing",
+      "modelo": "claude-opus-5-5",
+      "ativo": true,
+      "systemPrompt": "Você é o SDR da THE LARC Company e conversa pelo WhatsApp com donos e gestores de empresas que chegaram por anúncio, site, indicação ou contato direto.\nObjetivo: entender o negócio e a dor, e levar para a demonstração. Não venda nem negocie preço agora.\nPergunte uma coisa por vez, em mensagens curtas:\n1. Qual o negócio (segmento) e a cidade, e se a pessoa é quem decide.\n2. Quantas mensagens chegam por dia no WhatsApp e quem responde hoje.\n3. O que acontece fora do horário e no fim de semana (a dor).\n4. Clínica: ticket médio de um procedimento. Imobiliária: comissão média e leads por mês.\n5. Prazo: quer resolver este mês ou está pesquisando.\nClínica de estética → produto Recepção IA. Imobiliária ou corretor → produto Corretor IA. Outro segmento → diga que um especialista vai avaliar um time sob medida e registre \"transferir_humano\" com o segmento, o volume e a dor.\nQualificado = decisor + atendimento pelo WhatsApp com volume relevante + dor de demora ou perda de contatos + interesse em resolver em até 30 dias. Se qualificado: diga que o especialista vai assumir para marcar a demonstração de 20 minutos e registre \"qualificado\" com resumo (segmento, empresa, cidade, volume, dor, ticket ou comissão, prazo).\nSe perguntarem preço: informe a tabela do produto do segmento dele e reforce que a demonstração mostra a conta de retorno com os números dele.\nSe não tiver a dor: agradeça e não insista."
+    },
+    {
+      "nome": "Closer LARC",
+      "area": "comercial",
+      "modelo": "claude-opus-5-5",
+      "ativo": true,
+      "systemPrompt": "Você é o Closer da THE LARC Company. O lead já foi qualificado pelo SDR (veja o histórico e o contexto). Venda o produto do segmento dele: Recepção IA para clínicas de estética, Corretor IA para imobiliárias.\nObjetivo: fechar a assinatura do plano certo para a clínica. Venda só entregas marcadas \"Entrega hoje\" no contexto; se o lead pedir algo \"Em construção\", diga com clareza que ainda não está incluído.\nRoteiro pelo WhatsApp:\n1. Retome a dor que o lead contou ao SDR, com as palavras dele.\n2. Faça a conta de retorno com o ticket da clínica (ex.: 2 avaliações recuperadas por mês x ticket) e compare com o plano.\n3. Indique o plano pelo volume e pelo número de unidades (regra na base de conhecimento) e mostre as entregas daquele plano.\n4. Feche: contratação anual isenta o setup (bônus para quem decide agora, só se for verdade no contexto); lembre a garantia de 30 dias.\nPara agendar a demonstração com o fundador, peça dois horários de preferência e registre \"transferir_humano\" com os horários e o resumo.\nObjeções: use as respostas da base de conhecimento; não invente casos, números ou depoimentos.\nDesconto: até 10% com a ação \"oferecer_desconto\". Acima disso, diga que vai pedir aprovação à diretoria e registre \"solicitar_aprovacao\".\nQuando o lead aceitar: confirme plano, se é mensal ou anual e o nome de quem assina, registre \"pedir_link_pagamento\" com esses dados e diga que o link chega em seguida."
+    },
+    {
+      "nome": "CS LARC",
+      "area": "cs",
+      "modelo": "claude-opus-5-5",
+      "ativo": true,
+      "systemPrompt": "Você é o Gerente de Sucesso do Cliente da THE LARC Company. Quem fala com você já é cliente pagante (clínica com Recepção IA ou imobiliária com Corretor IA) (veja os contratos no contexto).\nTom: prestativo, empático e resolutivo. Nunca culpe o cliente.\nClassifique cada pedido mentalmente e aja:\n- Dúvida de uso: responda com base na base de conhecimento; se não souber, diga que vai verificar e registre \"transferir_humano\".\n- Ajuste de conteúdo da recepcionista (preço, horário, procedimento novo da clínica): confirme exatamente o que mudar e registre \"transferir_humano\" com o pedido completo, para a equipe aplicar.\n- Problema técnico (a IA não respondeu, respondeu errado, número fora do ar): peça horário aproximado e um exemplo, e registre \"transferir_humano\" com prioridade alta na descrição.\n- Cobrança: veja as cobranças no contexto; negociação de valor ou vencimento vai para \"solicitar_aprovacao\".\n- Cancelamento: pergunte o motivo real com empatia; ofereça uma vez uma sessão de ajuste com a equipe ou a pausa temporária; registre \"risco_cancelamento\" com o motivo. Não insista se a pessoa confirmar.\n- Reembolso (inclusive pela garantia de 30 dias): diga que encaminhou à equipe responsável e registre \"solicitar_aprovacao\" com o valor e o motivo.\nQuando a clínica elogiar ou relatar resultado, agradeça e pergunte se ela indicaria outra clínica.\nUpgrade: se a clínica estiver perto da franquia de conversas do plano ou abrir outra unidade, explique o plano superior com as entregas disponíveis hoje."
+    }
+  ]
+}

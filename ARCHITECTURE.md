@@ -1,55 +1,58 @@
 # Arquitetura
 
-## Decisão: monorepo simples (sem workspaces tool como Turborepo/Nx)
+Plataforma comercial white-label, uma instalação (servidor + banco) por cliente: CRM comercial, agente de IA de atendimento, automações e
+dashboard financeiro, compartilhando um único banco PostgreSQL.
 
-Estrutura:
+## Decisões
+
+| Decisão | Escolha | Por quê |
+|---|---|---|
+| Formato | Monólito modular (`/server` + `/client`) | Uma empresa, poucos usuários: microsserviços só adicionariam custo e operação |
+| API | tRPC (tipos ponta a ponta) | O front-end quebra na compilação se o contrato da API mudar |
+| Banco | PostgreSQL + Drizzle (migrações versionadas em `server/drizzle/`) | Relacional, transações, `numeric` para dinheiro |
+| Auth | Própria, no Postgres: argon2id (`@node-rs/argon2`) + sessão em cookie `httpOnly` | Sem dependência externa, roda igual em dev, teste e VPS |
+| Front-end | React + Vite + Tailwind, servido pelo próprio servidor Node em produção | Uma só porta/processo, mesma origem (cookie sem CORS) |
+| Hospedagem alvo | VPS + Docker Compose | ≤ R$ 100/mês de infraestrutura |
+
+## Módulos
 
 ```
-/server   -> API Node.js + tRPC + Drizzle (PostgreSQL)
-/client   -> React + Tailwind (Vite)
+server/src/
+  auth/        sessões, senhas, limite de tentativas, matriz de permissões
+  db/          schema.ts (fonte da verdade), seed.ts, migrate.ts
+  lib/         dinheiro (centavos), datas (fuso), csv, auditoria, eventos
+  router/      admin, auth, crm/{cadastros, pipeline, relatorios}
+  app.ts       servidor HTTP: /trpc, /saude, arquivos do front-end, CSRF por Origin
+client/src/
+  pages/       uma tela por rota
+  components/  ui (botões, modais, estados), formulários, CSV, histórico
 ```
 
-Motivo: o MVP tem escopo pequeno (um formulário, um motor de scoring, um painel admin).
-Ferramentas de monorepo (Turborepo, Nx, pnpm workspaces) adicionam complexidade de configuração
-sem benefício real nesse estágio — dois `package.json` independentes, cada um com seu próprio
-`node_modules`, são suficientes. Se o projeto crescer (ex.: pacote compartilhado de tipos entre
-client/server), reavaliar.
+## Integração entre módulos
 
-## /server
+- **Eventos**: toda ação relevante (empresa criada, mudança de etapa, oportunidade encerrada,
+  resposta do contato, opt-out, contrato criado) grava uma linha em `evento`. O motor de
+  automações (etapa 4) consome essa fila, e ela tem chave de idempotência contra duplicidade.
+- **Histórico único** (`interacao`): interações humanas, alterações automáticas e (etapa 5) conversas do
+  agente de IA ficam na mesma linha do tempo do cliente.
+- **Contrato → financeiro**: contratos registram mensalidade e dia de cobrança. A etapa 3 gera as
+  contas a receber a partir deles. Oportunidade nunca é contada como receita.
 
-- **Runtime**: Node.js (TypeScript)
-- **API**: tRPC (`src/router`) — roteador raiz vazio nesta etapa, endpoints vêm depois
-- **ORM**: Drizzle (`src/db`)
-  - `src/db/schema.ts` — definição das tabelas (espelha a seção 4.1 do PRD)
-  - `src/db/index.ts` — client de conexão (node-postgres)
-  - `drizzle/` — migrations geradas (`drizzle-kit generate`)
-- **Auth**: Supabase Auth. O client faz login diretamente contra o Supabase (front-end);
-  o server só precisa validar o JWT do Supabase nas rotas do painel admin (não implementado
-  ainda nesta etapa — só a variável de ambiente e a estrutura de pasta `src/auth/` reservada).
-- **Scripts de validação**: `src/db/seed-validation.ts` — insere registros de exemplo em
-  `veiculo_tecnico` para confirmar que os campos condicionais aceitam NULL corretamente.
+## Segurança aplicada
 
-## /client
+- Permissões verificadas no servidor em cada procedimento (`comPermissao`), nunca só na interface.
+- Token de sessão aleatório (256 bits). O banco guarda só o SHA-256 dele. Cookie `httpOnly`,
+  `SameSite=Lax`, `Secure` em produção. Desativar o usuário ou mudar o perfil encerra as sessões dele.
+- Login: 5 falhas por e-mail ou 20 por IP em 15 min geram bloqueio temporário. A mensagem de erro é genérica.
+- Requisições que mudam estado exigem `Origin` da própria aplicação (CSRF).
+- Consultas via Drizzle (parametrizadas), entradas validadas com Zod, erros internos sem detalhes ao cliente.
+- CSV exportado neutraliza fórmulas (`=`, `+`, `-`, `@`).
+- Ações administrativas registradas em `auditoria`.
 
-- **Build tool**: Vite (mais rápido que CRA, zero config extra para React+TS+Tailwind)
-- **Styling**: Tailwind CSS
-- Nesta etapa, só o scaffold — sem formulário nem chamadas tRPC ainda.
+## Integridade de dados
 
-## Nomenclatura
-
-- Tabelas/campos do banco seguem os nomes em português do PRD (schema é fonte da verdade).
-- Código (TypeScript) usa `camelCase` para variáveis/objetos, seguindo convenção do Drizzle,
-  mas os nomes de coluna no banco (snake_case em português) são preservados via `drizzle-orm`
-  usando `.$type` e o segundo argumento de cada coluna (nome real da coluna SQL).
-
-## Decisões não explícitas no PRD
-
-1. **Vite em vez de Next.js/CRA** para o client — o PRD só especifica "React + Tailwind", sem
-   framework de meta-routing. Como não há SSR necessário no MVP, Vite é a opção mais simples.
-2. **node-postgres (`pg`) como driver** do Drizzle, por ser o mais maduro para Postgres puro
-   (não usamos Supabase como client de dados, só como provedor de Auth — o Postgres é acessado
-   diretamente via Drizzle, seguindo a stack pedida).
-3. **drizzle-kit** para gerar/rodar migrations (`npm run db:generate` / `db:migrate` em `/server`).
-4. Enum `categoria_veiculo` modelado com `pgEnum` do Drizzle, mapeando 1:1 com o SQL do PRD.
-5. Pasta `src/auth/` no server reservada para o middleware de validação de JWT do Supabase,
-   usado futuramente pelas rotas do painel admin (seção 6 do PRD) — não implementado nesta etapa.
+- Unicidade no banco: nome de empresa (sem diferenciar maiúsculas), CNPJ e e-mail de contato.
+- Concorrência otimista (`versao`) em empresa, contato e oportunidade.
+- Arquivamento em vez de exclusão. Anonimização de contato para pedidos LGPD.
+- Registro + histórico + evento gravados na mesma transação.
+- Detalhes e regras em `CLAUDE.md` e `docs/requirements.md`.

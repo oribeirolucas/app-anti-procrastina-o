@@ -5,8 +5,106 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1786740105073,
-      "tag": "0000_grey_toad_men",
+      "when": 1792812700355,
+      "tag": "0000_fundacao_crm",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792813399764,
+      "tag": "0001_integridade_arquivamento",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793116667566,
+      "tag": "0002_empresa_nome_cidade",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793116740674,
+      "tag": "0003_financeiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793121122887,
+      "tag": "0004_automacoes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793123086606,
+      "tag": "0005_contratos_gestao",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793123097171,
+      "tag": "0006_contratos_restricoes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793184995222,
+      "tag": "0007_planos",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793194533453,
+      "tag": "0008_consumo_franquia",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793196751719,
+      "tag": "0009_operacao_agentes",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793198061033,
+      "tag": "0010_atendimento_ia",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793198963201,
+      "tag": "0011_transcricao_audio",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793202239125,
+      "tag": "0012_oferta_planos",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793203149501,
+      "tag": "0013_recursos_pro",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793205902405,
+      "tag": "0014_multiunidade",
       "breakpoints": true
     }
   ]

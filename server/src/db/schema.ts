@@ -4,114 +4,740 @@ import {
   uuid,
   varchar,
   integer,
-  decimal,
+  numeric,
   boolean,
   jsonb,
   text,
   timestamp,
+  date,
+  index,
+  uniqueIndex,
+  check,
+  unique,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
-export const categoriaVeiculoEnum = pgEnum("categoria_veiculo", [
-  "hatch_sedan_popular",
-  "suv_compacto",
-  "suv_medio",
-  "picape",
-  "eletrico_hibrido",
-]);
+// Valores monetários: numeric(14,2) no banco, string no TypeScript.
+// Cálculos são feitos em centavos (inteiros) — ver src/lib/dinheiro.ts.
+const dinheiro = (nome: string) => numeric(nome, { precision: 14, scale: 2 });
+const criadoEm = () => timestamp("criado_em", { withTimezone: true }).notNull().defaultNow();
+const atualizadoEm = () => timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow();
+// Controle de concorrência otimista: toda edição envia a versão lida; se mudou, a gravação é recusada.
+const versao = () => integer("versao").notNull().default(1);
+// Arquivamento em vez de exclusão física: preserva histórico e indicadores.
+const arquivadoEm = () => timestamp("arquivado_em", { withTimezone: true });
 
-export const veiculoTecnico = pgTable("veiculo_tecnico", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  marca: varchar("marca").notNull(),
-  modelo: varchar("modelo").notNull(),
-  versao: varchar("versao").notNull(),
-  ano: integer("ano").notNull(),
-  categoria: categoriaVeiculoEnum("categoria").notNull(),
-  precoReferencia: decimal("preco_referencia").notNull(),
-  cambio: varchar("cambio").notNull(), // manual | automatico
-  combustivel: varchar("combustivel").notNull(), // flex | hibrido | eletrico | diesel
+// ───────────────────────── Fundação ─────────────────────────
 
-  // atributos padrão (0-100 normalizado)
-  scoreEconomia: integer("score_economia"),
-  scoreSeguranca: integer("score_seguranca"),
-  scoreEspaco: integer("score_espaco"),
-  scoreManutencao: integer("score_manutencao"),
-  scoreRevenda: integer("score_revenda"),
-
-  // atributos condicionais
-  capacidadeCargaKg: integer("capacidade_carga_kg"), // picape
-  tracao4x4: boolean("tracao_4x4"), // picape
-  alturaLivreSoloMm: integer("altura_livre_solo_mm"), // picape
-  autonomiaKm: integer("autonomia_km"), // eletrico_hibrido
-  tempoRecargaMin: integer("tempo_recarga_min"), // eletrico_hibrido
-
-  ativo: boolean("ativo").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const veiculoAlias = pgTable("veiculo_alias", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  veiculoId: uuid("veiculo_id").references(() => veiculoTecnico.id),
-  alias: varchar("alias").notNull(),
-});
+export const perfilEnum = pgEnum("perfil", ["admin", "gestor", "operador"]);
 
 export const usuario = pgTable("usuario", {
   id: uuid("id").primaryKey().defaultRandom(),
-  nome: varchar("nome"),
-  telefone: varchar("telefone"),
-  cidade: varchar("cidade"),
-  createdAt: timestamp("created_at").defaultNow(),
+  nome: varchar("nome", { length: 120 }).notNull(),
+  email: varchar("email", { length: 200 }).notNull().unique(),
+  senhaHash: text("senha_hash").notNull(),
+  perfil: perfilEnum("perfil").notNull().default("operador"),
+  ativo: boolean("ativo").notNull().default(true),
+  criadoEm: criadoEm(),
+  atualizadoEm: atualizadoEm(),
 });
 
-export const diagnostico = pgTable("diagnostico", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  usuarioId: uuid("usuario_id").references(() => usuario.id),
-  respostas: jsonb("respostas").notNull(),
-  kmMesFaixa: varchar("km_mes_faixa"),
-  pessoasTransportadas: integer("pessoas_transportadas"),
-  orcamentoMin: decimal("orcamento_min"),
-  orcamentoMax: decimal("orcamento_max"),
-  financiamento: boolean("financiamento"),
-  prioridades: jsonb("prioridades"),
-  horizontePosse: varchar("horizonte_posse"),
-  primeiraCompra: boolean("primeira_compra"),
-  cambioRestricao: varchar("cambio_restricao"),
-  combustivelRestricao: varchar("combustivel_restricao"),
-  categoriaInferida: categoriaVeiculoEnum("categoria_inferida"),
-  createdAt: timestamp("created_at").defaultNow(),
+// Guardamos só o SHA-256 do token; o token em si fica apenas no cookie do navegador.
+export const sessao = pgTable(
+  "sessao",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => usuario.id, { onDelete: "cascade" }),
+    expiraEm: timestamp("expira_em", { withTimezone: true }).notNull(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("sessao_usuario_idx").on(t.usuarioId)],
+);
+
+export const tentativaLogin = pgTable(
+  "tentativa_login",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    chave: varchar("chave", { length: 250 }).notNull(), // email ou IP
+    sucesso: boolean("sucesso").notNull(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("tentativa_chave_idx").on(t.chave, t.criadoEm)],
+);
+
+export const auditoria = pgTable(
+  "auditoria",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    usuarioId: uuid("usuario_id").references(() => usuario.id, { onDelete: "set null" }),
+    acao: varchar("acao", { length: 80 }).notNull(),
+    entidade: varchar("entidade", { length: 60 }),
+    entidadeId: varchar("entidade_id", { length: 60 }),
+    detalhes: jsonb("detalhes"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("auditoria_criado_idx").on(t.criadoEm)],
+);
+
+export const configuracao = pgTable("configuracao", {
+  chave: varchar("chave", { length: 80 }).primaryKey(),
+  valor: jsonb("valor").notNull(),
+  atualizadoEm: atualizadoEm(),
 });
 
-export const recomendacao = pgTable("recomendacao", {
+// ───────────────────────── CRM ─────────────────────────
+
+export const empresa = pgTable(
+  "empresa",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 200 }).notNull(),
+    documento: varchar("documento", { length: 20 }), // CNPJ só dígitos
+    segmento: varchar("segmento", { length: 80 }),
+    cidade: varchar("cidade", { length: 120 }),
+    uf: varchar("uf", { length: 2 }),
+    telefone: varchar("telefone", { length: 30 }),
+    site: varchar("site", { length: 200 }),
+    observacoes: text("observacoes"),
+    responsavelId: uuid("responsavel_id").references(() => usuario.id, { onDelete: "set null" }),
+    versao: versao(),
+    arquivadoEm: arquivadoEm(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index("empresa_nome_idx").on(t.nome),
+    uniqueIndex("empresa_documento_uq").on(t.documento).where(sql`documento is not null`),
+    // Regra P2: nome único por cidade (cidade vazia conta como um valor)
+    uniqueIndex("empresa_nome_cidade_uq").on(sql`lower(${t.nome})`, sql`lower(coalesce(${t.cidade}, ''))`),
+  ],
+);
+
+export const contato = pgTable(
+  "contato",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    empresaId: uuid("empresa_id").references(() => empresa.id, { onDelete: "set null" }),
+    nome: varchar("nome", { length: 200 }).notNull(),
+    email: varchar("email", { length: 200 }),
+    telefone: varchar("telefone", { length: 30 }),
+    cargo: varchar("cargo", { length: 100 }),
+    // Opt-out: bloqueia qualquer follow-up automático para este contato.
+    descadastrado: boolean("descadastrado").notNull().default(false),
+    versao: versao(),
+    arquivadoEm: arquivadoEm(),
+    anonimizadoEm: timestamp("anonimizado_em", { withTimezone: true }),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index("contato_empresa_idx").on(t.empresaId),
+    uniqueIndex("contato_email_uq").on(t.email).where(sql`email is not null`),
+    // Busca do contato pelo número que chega no WhatsApp (só dígitos, com DDI)
+    index("contato_telefone_idx").on(t.telefone),
+  ],
+);
+
+export const etapaPipeline = pgTable("etapa_pipeline", {
   id: uuid("id").primaryKey().defaultRandom(),
-  diagnosticoId: uuid("diagnostico_id").references(() => diagnostico.id),
-  veiculoId: uuid("veiculo_id").references(() => veiculoTecnico.id),
-  score: decimal("score").notNull(),
-  motivo: text("motivo").notNull(),
-  posicao: integer("posicao").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  nome: varchar("nome", { length: 80 }).notNull(),
+  ordem: integer("ordem").notNull(),
+  // aberta | ganha | perdida — define se a oportunidade foi encerrada ao entrar na etapa
+  tipo: varchar("tipo", { length: 10 }).notNull().default("aberta"),
+  probabilidade: integer("probabilidade").notNull().default(0), // 0–100
+  ativa: boolean("ativa").notNull().default(true),
 });
 
-export const interacao = pgTable("interacao", {
+export const oportunidade = pgTable(
+  "oportunidade",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    empresaId: uuid("empresa_id").references(() => empresa.id, { onDelete: "set null" }),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    etapaId: uuid("etapa_id")
+      .notNull()
+      .references(() => etapaPipeline.id),
+    responsavelId: uuid("responsavel_id").references(() => usuario.id, { onDelete: "set null" }),
+    origem: varchar("origem", { length: 60 }), // ligacao, indicacao, site, chat_ia...
+    valor: dinheiro("valor").notNull().default("0"), // valor mensal estimado (MRR)
+    // aberta | ganha | perdida (espelha o tipo da etapa atual)
+    situacao: varchar("situacao", { length: 10 }).notNull().default("aberta"),
+    motivoPerda: varchar("motivo_perda", { length: 200 }),
+    previsaoFechamento: date("previsao_fechamento"),
+    fechadaEm: timestamp("fechada_em", { withTimezone: true }),
+    versao: versao(),
+    arquivadoEm: arquivadoEm(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [index("oport_etapa_idx").on(t.etapaId), index("oport_situacao_idx").on(t.situacao)],
+);
+
+// Histórico unificado: interações (ligação, e-mail, nota) e alterações automáticas.
+export const interacao = pgTable(
+  "interacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tipo: varchar("tipo", { length: 20 }).notNull(), // nota | ligacao | email | whatsapp | reuniao | alteracao | chat_ia
+    descricao: text("descricao").notNull(),
+    empresaId: uuid("empresa_id").references(() => empresa.id, { onDelete: "cascade" }),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "cascade" }),
+    oportunidadeId: uuid("oportunidade_id").references(() => oportunidade.id, { onDelete: "cascade" }),
+    usuarioId: uuid("usuario_id").references(() => usuario.id, { onDelete: "set null" }),
+    // true = o contato respondeu (encerra sequências de follow-up)
+    respostaDoContato: boolean("resposta_do_contato").notNull().default(false),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("interacao_oport_idx").on(t.oportunidadeId), index("interacao_contato_idx").on(t.contatoId)],
+);
+
+export const tarefa = pgTable(
+  "tarefa",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    descricao: text("descricao"),
+    venceEm: timestamp("vence_em", { withTimezone: true }),
+    concluida: boolean("concluida").notNull().default(false),
+    concluidaEm: timestamp("concluida_em", { withTimezone: true }),
+    responsavelId: uuid("responsavel_id").references(() => usuario.id, { onDelete: "set null" }),
+    empresaId: uuid("empresa_id").references(() => empresa.id, { onDelete: "cascade" }),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "cascade" }),
+    oportunidadeId: uuid("oportunidade_id").references(() => oportunidade.id, { onDelete: "cascade" }),
+    origem: varchar("origem", { length: 20 }).notNull().default("manual"), // manual | automacao | follow_up
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("tarefa_vence_idx").on(t.concluida, t.venceEm)],
+);
+
+// Catálogo de planos/produtos vendidos (preço de tabela). O contrato guarda nome e valores
+// copiados no momento da venda, então mudar o preço aqui não altera contratos já firmados.
+export const plano = pgTable(
+  "plano",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 60 }).notNull(),
+    valorMensal: dinheiro("valor_mensal").notNull(),
+    valorSetup: dinheiro("valor_setup").notNull().default("0"),
+    descricao: varchar("descricao", { length: 300 }),
+    // Oferta (fonte única para agentes, marketing e site): promessa, para quem, franquia e entregas
+    promessa: varchar("promessa", { length: 120 }),
+    publicoIdeal: varchar("publico_ideal", { length: 200 }),
+    franquiaConversas: integer("franquia_conversas"), // conversas/mês incluídas (nulo = não definido)
+    // [{ item, disponivel }]: só o que está disponível pode ser vendido/anunciado
+    entregaveis: jsonb("entregaveis").$type<{ item: string; disponivel: boolean }[]>().notNull().default([]),
+    ativo: boolean("ativo").notNull().default(true),
+    ordem: integer("ordem").notNull().default(0),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex("plano_nome_uq").on(sql`lower(${t.nome})`),
+    check("plano_valores_ck", sql`${t.valorMensal} > 0 and ${t.valorSetup} >= 0`),
+  ],
+);
+
+export const contrato = pgTable(
+  "contrato",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    empresaId: uuid("empresa_id")
+      .notNull()
+      .references(() => empresa.id, { onDelete: "restrict" }),
+    oportunidadeId: uuid("oportunidade_id").references(() => oportunidade.id, { onDelete: "set null" }),
+    plano: varchar("plano", { length: 60 }).notNull(),
+    valorMensal: dinheiro("valor_mensal").notNull(),
+    valorSetup: dinheiro("valor_setup").notNull().default("0"),
+    inicio: date("inicio").notNull(),
+    fim: date("fim"), // vencimento/renovação
+    diaVencimento: integer("dia_vencimento").notNull().default(10),
+    situacao: varchar("situacao", { length: 12 }).notNull().default("ativo"), // ativo | suspenso | cancelado
+    // Motivo da última suspensão/cancelamento e data do cancelamento (cancelado é definitivo)
+    motivoSituacao: varchar("motivo_situacao", { length: 200 }),
+    canceladoEm: timestamp("cancelado_em", { withTimezone: true }),
+    observacoes: text("observacoes"),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index("contrato_fim_idx").on(t.fim),
+    check("contrato_situacao_ck", sql`${t.situacao} in ('ativo','suspenso','cancelado')`),
+    check("contrato_vigencia_ck", sql`${t.fim} is null or ${t.fim} >= ${t.inicio}`),
+  ],
+);
+
+// ───────────────────────── Eventos (fila para automações) ─────────────────────────
+
+// Todo fato relevante do sistema vira um evento; o motor de automações consome esta fila.
+export const evento = pgTable(
+  "evento",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tipo: varchar("tipo", { length: 60 }).notNull(),
+    payload: jsonb("payload").notNull(),
+    // Chave opcional para evitar eventos duplicados (ex.: webhook reenviado)
+    chaveIdempotencia: varchar("chave_idempotencia", { length: 200 }),
+    processadoEm: timestamp("processado_em", { withTimezone: true }),
+    // pendente | processado | falhou (falhou = esgotou tentativas, exige intervenção)
+    situacao: varchar("situacao", { length: 12 }).notNull().default("pendente"),
+    tentativas: integer("tentativas").notNull().default(0),
+    proximaTentativaEm: timestamp("proxima_tentativa_em", { withTimezone: true }),
+    ultimoErro: text("ultimo_erro"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    index("evento_pendente_idx").on(t.situacao, t.proximaTentativaEm, t.criadoEm),
+    uniqueIndex("evento_idem_uq").on(t.chaveIdempotencia),
+    check("evento_situacao_ck", sql`${t.situacao} in ('pendente','processado','falhou')`),
+  ],
+);
+
+// ───────────────────────── Financeiro ─────────────────────────
+
+export const categoriaFinanceira = pgTable(
+  "categoria_financeira",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 80 }).notNull(),
+    tipo: varchar("tipo", { length: 10 }).notNull(), // receita | despesa
+    ativa: boolean("ativa").notNull().default(true),
+    criadoEm: criadoEm(),
+  },
+  (t) => [uniqueIndex("categoria_nome_tipo_uq").on(sql`lower(${t.nome})`, t.tipo), check("categoria_tipo_ck", sql`${t.tipo} in ('receita','despesa')`)],
+);
+
+export const lancamento = pgTable(
+  "lancamento",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tipo: varchar("tipo", { length: 10 }).notNull(), // receita | despesa
+    descricao: varchar("descricao", { length: 200 }).notNull(),
+    categoriaId: uuid("categoria_id")
+      .notNull()
+      .references(() => categoriaFinanceira.id),
+    valor: dinheiro("valor").notNull(), // valor previsto (> 0)
+    competencia: date("competencia").notNull(), // sempre o dia 1 do mês de referência
+    vencimento: date("vencimento").notNull(),
+    // pendente | pago | cancelado
+    situacao: varchar("situacao", { length: 10 }).notNull().default("pendente"),
+    pagoEm: date("pago_em"),
+    valorPago: dinheiro("valor_pago"),
+    motivoCancelamento: varchar("motivo_cancelamento", { length: 200 }),
+    // manual | mensalidade | setup
+    origem: varchar("origem", { length: 12 }).notNull().default("manual"),
+    empresaId: uuid("empresa_id").references(() => empresa.id, { onDelete: "restrict" }),
+    contratoId: uuid("contrato_id").references(() => contrato.id, { onDelete: "restrict" }),
+    observacao: text("observacao"),
+    criadoPorId: uuid("criado_por_id").references(() => usuario.id, { onDelete: "set null" }),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index("lanc_vencimento_idx").on(t.situacao, t.vencimento),
+    index("lanc_pago_idx").on(t.pagoEm),
+    index("lanc_competencia_idx").on(t.competencia),
+    // Idempotência da geração de cobranças a partir de contratos
+    uniqueIndex("lanc_mensalidade_uq").on(t.contratoId, t.competencia).where(sql`origem = 'mensalidade'`),
+    uniqueIndex("lanc_setup_uq").on(t.contratoId).where(sql`origem = 'setup'`),
+    // Consistência garantida pelo banco, não só pela aplicação
+    check("lanc_tipo_ck", sql`${t.tipo} in ('receita','despesa')`),
+    check("lanc_situacao_ck", sql`${t.situacao} in ('pendente','pago','cancelado')`),
+    check("lanc_valor_ck", sql`${t.valor} > 0 and (${t.valorPago} is null or ${t.valorPago} >= 0)`),
+    check("lanc_competencia_ck", sql`extract(day from ${t.competencia}) = 1`),
+    check("lanc_baixa_ck", sql`(${t.situacao} = 'pago') = (${t.pagoEm} is not null and ${t.valorPago} is not null)`),
+    check("lanc_cancel_ck", sql`(${t.situacao} = 'cancelado') = (${t.motivoCancelamento} is not null)`),
+  ],
+);
+
+// ───────────────────────── Automações ─────────────────────────
+
+// Gatilho → condições → ações. Condições e ações em JSON validado por Zod (lib/automacoes/tipos.ts).
+export const automacao = pgTable(
+  "automacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 120 }).notNull(),
+    gatilho: varchar("gatilho", { length: 60 }).notNull(),
+    condicoes: jsonb("condicoes").notNull().default({}),
+    acoes: jsonb("acoes").notNull(),
+    ativa: boolean("ativa").notNull().default(true),
+    versao: versao(),
+    criadoPorId: uuid("criado_por_id").references(() => usuario.id, { onDelete: "set null" }),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [index("automacao_gatilho_idx").on(t.gatilho, t.ativa)],
+);
+
+// Uma linha por (automação, evento): o índice único é o que impede execução duplicada.
+export const execucaoAutomacao = pgTable(
+  "execucao_automacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    automacaoId: uuid("automacao_id")
+      .notNull()
+      .references(() => automacao.id, { onDelete: "cascade" }),
+    eventoId: uuid("evento_id")
+      .notNull()
+      .references(() => evento.id, { onDelete: "cascade" }),
+    // sucesso | ignorada (condição não atendida) | erro
+    situacao: varchar("situacao", { length: 10 }).notNull(),
+    tentativas: integer("tentativas").notNull().default(1),
+    detalhes: jsonb("detalhes"),
+    erro: text("erro"),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex("execucao_automacao_evento_uq").on(t.automacaoId, t.eventoId),
+    index("execucao_criado_idx").on(t.criadoEm),
+    check("execucao_situacao_ck", sql`${t.situacao} in ('sucesso','ignorada','erro')`),
+  ],
+);
+
+export const notificacao = pgTable(
+  "notificacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => usuario.id, { onDelete: "cascade" }),
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    mensagem: text("mensagem"),
+    link: varchar("link", { length: 300 }),
+    lidaEm: timestamp("lida_em", { withTimezone: true }),
+    // Evita notificar duas vezes pelo mesmo motivo (ex.: automação + evento)
+    chave: varchar("chave", { length: 200 }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index("notificacao_usuario_idx").on(t.usuarioId, t.lidaEm), uniqueIndex("notificacao_chave_uq").on(t.usuarioId, t.chave)],
+);
+
+export const sequenciaFollowup = pgTable("sequencia_followup", {
   id: uuid("id").primaryKey().defaultRandom(),
-  usuarioId: uuid("usuario_id").references(() => usuario.id),
-  tipo: varchar("tipo").notNull(), // visualizou | comparou | quis_oferta | feedback_pos_compra
-  veiculoId: uuid("veiculo_id").references(() => veiculoTecnico.id),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow(),
+  nome: varchar("nome", { length: 120 }).notNull(),
+  // [{ aposDias: number, titulo: string }]
+  passos: jsonb("passos").notNull(),
+  ativa: boolean("ativa").notNull().default(true),
+  criadoEm: criadoEm(),
+  atualizadoEm: atualizadoEm(),
 });
 
-export const lead = pgTable("lead", {
+export const inscricaoFollowup = pgTable(
+  "inscricao_followup",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sequenciaId: uuid("sequencia_id")
+      .notNull()
+      .references(() => sequenciaFollowup.id, { onDelete: "cascade" }),
+    oportunidadeId: uuid("oportunidade_id")
+      .notNull()
+      .references(() => oportunidade.id, { onDelete: "cascade" }),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    passoAtual: integer("passo_atual").notNull().default(0), // índice do próximo passo
+    proximoEm: timestamp("proximo_em", { withTimezone: true }),
+    // ativa | concluida | interrompida
+    situacao: varchar("situacao", { length: 12 }).notNull().default("ativa"),
+    motivoParada: varchar("motivo_parada", { length: 120 }),
+    iniciadaEm: criadoEm(),
+    encerradaEm: timestamp("encerrada_em", { withTimezone: true }),
+  },
+  (t) => [
+    index("inscricao_proximo_idx").on(t.situacao, t.proximoEm),
+    // Uma oportunidade não fica inscrita duas vezes, ao mesmo tempo, na mesma sequência
+    uniqueIndex("inscricao_ativa_uq").on(t.sequenciaId, t.oportunidadeId).where(sql`situacao = 'ativa'`),
+    check("inscricao_situacao_ck", sql`${t.situacao} in ('ativa','concluida','interrompida')`),
+  ],
+);
+
+// Origem de captação (landing page, formulário, n8n). modo: hmac (servidor-a-servidor) | publico (formulário no site).
+export const origemCaptacao = pgTable("origem_captacao", {
   id: uuid("id").primaryKey().defaultRandom(),
-  usuarioId: uuid("usuario_id").references(() => usuario.id),
-  recomendacaoId: uuid("recomendacao_id").references(() => recomendacao.id),
-  status: varchar("status").default("novo"), // novo | contatado | convertido | perdido
-  concessionariaDestino: varchar("concessionaria_destino"),
-  createdAt: timestamp("created_at").defaultNow(),
+  nome: varchar("nome", { length: 120 }).notNull(),
+  modo: varchar("modo", { length: 8 }).notNull(),
+  // Segredo HMAC (modo hmac). Necessário em texto para verificar a assinatura; exibido só na criação/rotação.
+  segredo: varchar("segredo", { length: 100 }),
+  etapaId: uuid("etapa_id")
+    .notNull()
+    .references(() => etapaPipeline.id),
+  origemRotulo: varchar("origem_rotulo", { length: 60 }).notNull().default("site"),
+  // Domínio autorizado para o formulário público (CORS). Ex.: https://minhaempresa.com.br
+  dominioPermitido: varchar("dominio_permitido", { length: 200 }),
+  ativa: boolean("ativa").notNull().default(true),
+  recebidos: integer("recebidos").notNull().default(0),
+  ultimoRecebimentoEm: timestamp("ultimo_recebimento_em", { withTimezone: true }),
+  criadoEm: criadoEm(),
 });
 
-export const listaEsperaCategoria = pgTable("lista_espera_categoria", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  usuarioId: uuid("usuario_id").references(() => usuario.id),
-  categoria: categoriaVeiculoEnum("categoria").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+// ───────────────────────── Consumo e franquia ─────────────────────────
+
+// Cada uso de recurso pago (IA, WhatsApp) vira uma linha. `referencia` é a chave de idempotência:
+// a mesma conversa/mensagem nunca é contada duas vezes, mesmo com reprocessamento.
+export const consumoUso = pgTable(
+  "consumo_uso",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recurso: varchar("recurso", { length: 30 }).notNull(),
+    quantidade: integer("quantidade").notNull(),
+    custoEstimado: dinheiro("custo_estimado"),
+    referencia: varchar("referencia", { length: 200 }).notNull(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex("consumo_referencia_uq").on(t.recurso, t.referencia),
+    index("consumo_recurso_data_idx").on(t.recurso, t.criadoEm),
+    check("consumo_recurso_ck", sql`${t.recurso} in ('ia_conversa','ia_tokens','whatsapp_conversa','transcricao_segundos')`),
+    check("consumo_quantidade_ck", sql`${t.quantidade} > 0`),
+  ],
+);
+
+// ───────────────────────── Operação por agentes de IA ─────────────────────────
+
+// Configuração de cada agente autônomo. O prompt é versionado (concorrência otimista) e auditado.
+export const agente = pgTable(
+  "agente",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 80 }).notNull(),
+    area: varchar("area", { length: 20 }).notNull(), // marketing | comercial | cs | financeiro
+    systemPrompt: text("system_prompt").notNull().default(""),
+    provedor: varchar("provedor", { length: 12 }).notNull().default("anthropic"), // anthropic | openai | google
+    modelo: varchar("modelo", { length: 60 }).notNull(),
+    ativo: boolean("ativo").notNull().default(false),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex("agente_nome_uq").on(sql`lower(${t.nome})`),
+    check("agente_area_ck", sql`${t.area} in ('marketing','comercial','cs','financeiro')`),
+    check("agente_provedor_ck", sql`${t.provedor} in ('anthropic','openai','google')`),
+  ],
+);
+
+// Log de cada execução de um agente (o que fez, consumo e falhas).
+export const execucaoAgente = pgTable(
+  "execucao_agente",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agenteId: uuid("agente_id")
+      .notNull()
+      .references(() => agente.id, { onDelete: "cascade" }),
+    situacao: varchar("situacao", { length: 12 }).notNull(), // ok | erro | bloqueada
+    resumo: varchar("resumo", { length: 300 }).notNull(),
+    tokensEntrada: integer("tokens_entrada").notNull().default(0),
+    tokensSaida: integer("tokens_saida").notNull().default(0),
+    erro: text("erro"),
+    duracaoMs: integer("duracao_ms"),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    index("exec_agente_idx").on(t.agenteId, t.criadoEm),
+    check("exec_agente_situacao_ck", sql`${t.situacao} in ('ok','erro','bloqueada')`),
+  ],
+);
+
+// Decisões que os agentes não podem tomar sozinhos (governança): orçamento, desconto, deploy...
+export const solicitacaoAprovacao = pgTable(
+  "solicitacao_aprovacao",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tipo: varchar("tipo", { length: 12 }).notNull(), // orcamento | desconto | deploy | outro
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    descricao: text("descricao"),
+    valor: dinheiro("valor"),
+    agenteId: uuid("agente_id").references(() => agente.id, { onDelete: "set null" }),
+    // Chave de idempotência do solicitante: o mesmo pedido não entra duas vezes na fila
+    referencia: varchar("referencia", { length: 200 }).notNull(),
+    situacao: varchar("situacao", { length: 10 }).notNull().default("pendente"), // pendente | aprovada | recusada
+    decididoPorId: uuid("decidido_por_id").references(() => usuario.id, { onDelete: "set null" }),
+    decididoEm: timestamp("decidido_em", { withTimezone: true }),
+    motivoDecisao: varchar("motivo_decisao", { length: 300 }),
+    versao: versao(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex("aprovacao_referencia_uq").on(t.referencia),
+    index("aprovacao_situacao_idx").on(t.situacao, t.criadoEm),
+    check("aprovacao_tipo_ck", sql`${t.tipo} in ('orcamento','desconto','deploy','outro')`),
+    check("aprovacao_situacao_ck", sql`${t.situacao} in ('pendente','aprovada','recusada')`),
+    // Decidida ⇔ tem quem e quando decidiu; recusa exige motivo
+    check("aprovacao_decisao_ck", sql`(${t.situacao} = 'pendente') = (${t.decididoEm} is null)`),
+    check("aprovacao_recusa_ck", sql`${t.situacao} <> 'recusada' or ${t.motivoDecisao} is not null`),
+  ],
+);
+
+// Conversas de canais externos (WhatsApp) e suas mensagens, para auditoria do atendimento.
+export const conversa = pgTable(
+  "conversa",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    canal: varchar("canal", { length: 12 }).notNull().default("whatsapp"),
+    idExterno: varchar("id_externo", { length: 120 }).notNull(), // id do contato no canal
+    nomeExibicao: varchar("nome_exibicao", { length: 120 }),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    agenteId: uuid("agente_id").references(() => agente.id, { onDelete: "set null" }),
+    // Unidade (número de WhatsApp da clínica) em que a conversa acontece; nulo = número principal
+    unidadeId: uuid("unidade_id").references(() => unidade.id, { onDelete: "set null" }),
+    situacao: varchar("situacao", { length: 10 }).notNull().default("ia"), // ia | humano | encerrada
+    // Trava de processamento (lease): só um processo responde a conversa por vez; expira sozinha se ele cair
+    processandoAte: timestamp("processando_ate", { withTimezone: true }),
+    ultimaMensagemEm: timestamp("ultima_mensagem_em", { withTimezone: true }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    // A mesma pessoa pode falar com duas unidades: uma conversa por unidade
+    unique("conversa_canal_externo_unidade_uq").on(t.canal, t.idExterno, t.unidadeId).nullsNotDistinct(),
+    index("conversa_ultima_idx").on(t.situacao, t.ultimaMensagemEm),
+    check("conversa_situacao_ck", sql`${t.situacao} in ('ia','humano','encerrada')`),
+  ],
+);
+
+export const mensagem = pgTable(
+  "mensagem",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversaId: uuid("conversa_id")
+      .notNull()
+      .references(() => conversa.id, { onDelete: "cascade" }),
+    autor: varchar("autor", { length: 8 }).notNull(), // cliente | ia | humano
+    texto: text("texto").notNull(),
+    // Por que a mensagem saiu: atendimento (resposta) | retomada | lembrete | campanha. Só "atendimento" abre ciclo de retomada.
+    origem: varchar("origem", { length: 12 }).notNull().default("atendimento"),
+    idExterno: varchar("id_externo", { length: 120 }), // id da mensagem no canal (idempotência do webhook)
+    // Mídia recebida (ex.: áudio do WhatsApp): id na Meta para baixar; o texto vira a transcrição
+    midiaId: varchar("midia_id", { length: 120 }),
+    midiaTipo: varchar("midia_tipo", { length: 20 }), // audio | image | ...
+    transcritaEm: timestamp("transcrita_em", { withTimezone: true }),
+    // Fila de atendimento: mensagem do cliente ainda sem resposta da IA (processada_em nulo)
+    processadaEm: timestamp("processada_em", { withTimezone: true }),
+    tentativas: integer("tentativas").notNull().default(0),
+    // Saída para o canal: quando foi entregue à API do WhatsApp, ou por que não foi
+    enviadaEm: timestamp("enviada_em", { withTimezone: true }),
+    erroEnvio: varchar("erro_envio", { length: 300 }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    index("mensagem_conversa_idx").on(t.conversaId, t.criadoEm),
+    index("mensagem_fila_idx").on(t.autor, t.processadaEm).where(sql`processada_em is null`),
+    uniqueIndex("mensagem_externo_uq").on(t.conversaId, t.idExterno),
+    check("mensagem_autor_ck", sql`${t.autor} in ('cliente','ia','humano')`),
+  ],
+);
+
+// ───────────────────────── Recursos do plano Pro (retomada, agenda, reativação) ─────────────────────────
+
+// Retomada automática de quem parou de responder. Um registro por passo e por última mensagem nossa
+// (idempotência: o mesmo silêncio nunca gera duas retomadas iguais).
+export const retomada = pgTable(
+  "retomada",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversaId: uuid("conversa_id").notNull().references(() => conversa.id, { onDelete: "cascade" }),
+    mensagemRefId: uuid("mensagem_ref_id").notNull(), // última mensagem nossa antes do silêncio
+    passo: integer("passo").notNull(), // 1 ou 2
+    situacao: varchar("situacao", { length: 10 }).notNull(), // enviada | falhou
+    erro: varchar("erro", { length: 300 }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex("retomada_uq").on(t.conversaId, t.mensagemRefId, t.passo),
+    check("retomada_situacao_ck", sql`${t.situacao} in ('enviada','falhou')`),
+  ],
+);
+
+// Agenda da clínica (importada por planilha ou cadastrada): base da confirmação de consultas.
+export const agendamento = pgTable(
+  "agendamento",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contatoId: uuid("contato_id").references(() => contato.id, { onDelete: "set null" }),
+    unidadeId: uuid("unidade_id").references(() => unidade.id, { onDelete: "set null" }),
+    nome: varchar("nome", { length: 200 }).notNull(),
+    telefone: varchar("telefone", { length: 20 }).notNull(), // só dígitos, com DDI
+    inicio: timestamp("inicio", { withTimezone: true }).notNull(),
+    procedimento: varchar("procedimento", { length: 120 }),
+    profissional: varchar("profissional", { length: 120 }),
+    // agendado → (lembrete) → confirmado | cancelado | remarcar | sem_resposta; depois compareceu | faltou
+    situacao: varchar("situacao", { length: 12 }).notNull().default("agendado"),
+    lembreteEnviadoEm: timestamp("lembrete_enviado_em", { withTimezone: true }),
+    respostaEm: timestamp("resposta_em", { withTimezone: true }),
+    erroLembrete: varchar("erro_lembrete", { length: 300 }),
+    idExterno: varchar("id_externo", { length: 120 }), // chave da linha importada (reimportar não duplica)
+    origem: varchar("origem", { length: 10 }).notNull().default("manual"), // manual | planilha
+    observacao: varchar("observacao", { length: 300 }),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index("agendamento_inicio_idx").on(t.inicio),
+    index("agendamento_telefone_idx").on(t.telefone, t.inicio),
+    uniqueIndex("agendamento_externo_uq").on(t.idExterno).where(sql`id_externo is not null`),
+    check("agendamento_situacao_ck", sql`${t.situacao} in ('agendado','confirmado','cancelado','remarcar','sem_resposta','compareceu','faltou')`),
+  ],
+);
+
+// Campanha de reativação: só envia depois de aprovada pelo estrategista (mensagem em massa).
+export const campanha = pgTable(
+  "campanha",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 120 }).notNull(),
+    modelo: varchar("modelo", { length: 120 }).notNull(), // nome do modelo aprovado na Meta
+    unidadeId: uuid("unidade_id").references(() => unidade.id, { onDelete: "set null" }), // número que envia
+    // rascunho → aguardando_aprovacao → aprovada → enviando → concluida | recusada | cancelada
+    situacao: varchar("situacao", { length: 22 }).notNull().default("rascunho"),
+    solicitacaoId: uuid("solicitacao_id").references(() => solicitacaoAprovacao.id, { onDelete: "set null" }),
+    limitePorCiclo: integer("limite_por_ciclo").notNull().default(30),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [check("campanha_situacao_ck", sql`${t.situacao} in ('rascunho','aguardando_aprovacao','aprovada','enviando','concluida','recusada','cancelada')`)],
+);
+
+export const campanhaDestinatario = pgTable(
+  "campanha_destinatario",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    campanhaId: uuid("campanha_id").notNull().references(() => campanha.id, { onDelete: "cascade" }),
+    nome: varchar("nome", { length: 200 }).notNull(),
+    telefone: varchar("telefone", { length: 20 }).notNull(),
+    situacao: varchar("situacao", { length: 10 }).notNull().default("pendente"), // pendente | enviado | falhou | pulado
+    motivo: varchar("motivo", { length: 300 }),
+    enviadoEm: timestamp("enviado_em", { withTimezone: true }),
+    respondeuEm: timestamp("respondeu_em", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("camp_dest_uq").on(t.campanhaId, t.telefone),
+    index("camp_dest_fila_idx").on(t.campanhaId, t.situacao),
+    check("camp_dest_situacao_ck", sql`${t.situacao} in ('pendente','enviado','falhou','pulado')`),
+  ],
+);
+
+// ───────────────────────── Unidades (plano Rede) ─────────────────────────
+
+// Cada unidade é um número de WhatsApp da clínica, com informações próprias que o agente usa nas respostas.
+export const unidade = pgTable(
+  "unidade",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nome: varchar("nome", { length: 80 }).notNull(),
+    // Phone number ID da Meta: identifica de qual número veio cada mensagem e por qual número responder
+    numeroId: varchar("numero_id", { length: 40 }).notNull(),
+    numeroExibicao: varchar("numero_exibicao", { length: 30 }),
+    informacoes: text("informacoes").notNull().default(""), // endereço, horários, equipe, particularidades
+    ativa: boolean("ativa").notNull().default(true),
+    versao: versao(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [uniqueIndex("unidade_numero_uq").on(t.numeroId), uniqueIndex("unidade_nome_uq").on(sql`lower(${t.nome})`)],
+);
